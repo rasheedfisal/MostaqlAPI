@@ -1,0 +1,73 @@
+"use strict";
+const { Model, Sequelize } = require("sequelize");
+module.exports = (sequelize, DataTypes) => {
+  class Project extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      Project.belongsTo(models.User, {
+        foreignKey: "user_added_id",
+      });
+      Project.belongsTo(models.PriceRange, {
+        foreignKey: "price_range_id",
+      });
+      Project.belongsTo(models.ProjStatus, {
+        foreignKey: "proj_status_id",
+      });
+      Project.belongsTo(models.Category, {
+        foreignKey: "category_id",
+      });
+    }
+  }
+  Project.init(
+    {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+        primaryKey: true,
+      },
+      user_added_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      proj_title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      proj_description: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      category_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      price_range_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      proj_period: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      attatchment_file: DataTypes.STRING,
+      proj_status_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+    },
+    {
+      sequelize,
+      modelName: "Project",
+    }
+  );
+  return Project;
+};
