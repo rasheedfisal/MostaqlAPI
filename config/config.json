@@ -1,23 +1,23 @@
 {
   "development": {
-    "username": "root",
-    "password": "root",
-    "database": "mostaqldb",
-    "host": "127.0.0.1",
+    "username": "u603781915_lazer_name",
+    "password": "Administrator.0",
+    "database": "u603781915_lazer_dbname",
+    "host": "45.84.205.0",
     "dialect": "mysql"
   },
   "test": {
-    "username": "root",
-    "password": "root",
-    "database": "mostaqldb",
-    "host": "127.0.0.1",
+    "username": "u603781915_lazer_name",
+    "password": "Administrator.0",
+    "database": "u603781915_lazer_dbname",
+    "host": "45.84.205.0",
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": "root",
-    "database": "mostaqldb",
-    "host": "127.0.0.1",
+    "username": "u603781915_lazer_name",
+    "password": "Administrator.0",
+    "database": "u603781915_lazer_dbname",
+    "host": "45.84.205.0",
     "dialect": "mysql"
   }
 }
