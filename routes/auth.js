@@ -5,7 +5,9 @@ const multer = require("multer");
 const router = express.Router();
 require("../config/passport")(passport);
 const User = require("../models").User;
-//const Role = require("../models").Role;
+const loginLimiter = require("../middlewares/loginLimiter");
+// const Role = require("../models").Role;
+const Sequelize = require("sequelize");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -71,11 +73,25 @@ router.post("/signup", upload.single("profileImage"), function (req, res) {
   }
 });
 
-router.post("/signin", function (req, res) {
+router.post("/signin", loginLimiter, function (req, res) {
   User.findOne({
+    attributes: [
+      [Sequelize.col("user.id"), "uid"],
+      "email",
+      "fullname",
+      "password",
+      [
+        Sequelize.fn("concat", req.headers.host, "/", Sequelize.col("imgPath")),
+        "imgPath",
+      ],
+    ],
     where: {
       email: req.body.email,
     },
+    // include: {
+    //   model: Role,
+    //   attributes: ["id", "role_name"],
+    // },
   })
     .then((user) => {
       if (!user) {
@@ -85,16 +101,30 @@ router.post("/signin", function (req, res) {
       }
       user.comparePassword(req.body.password, (err, isMatch) => {
         if (isMatch && !err) {
+          let userWithoutPassword = Object.assign(user);
+          userWithoutPassword.password = undefined;
           var token = jwt.sign(
-            JSON.parse(JSON.stringify(user)),
-            "nodeauthsecret",
+            JSON.parse(JSON.stringify(userWithoutPassword)),
+            //JSON.parse(JSON.stringify(user)),
+            process.env.JWT_SECRET,
             {
-              expiresIn: "1d", //86400 * 30 in seconds = 30 days
+              expiresIn: "15m", //86400 * 30 in seconds = 30 days
             }
           );
-          jwt.verify(token, "nodeauthsecret", function (err, data) {
-            console.log(err, data);
+          const refreshToken = jwt.sign(
+            JSON.parse(JSON.stringify(userWithoutPassword)),
+            //JSON.parse(JSON.stringify(user)),
+            process.env.REFRESH_JWT_SECRET,
+            { expiresIn: "1h" }
+          );
+
+          res.cookie("jwt", refreshToken, {
+            httpOnly: true, //accessible only by web server
+            secure: true, //https
+            sameSite: "None", //cross-site cookie
+            maxAge: 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
+
           res.json({
             success: true,
             token: "JWT " + token,
@@ -108,6 +138,72 @@ router.post("/signin", function (req, res) {
       });
     })
     .catch((error) => res.status(400).send(error));
+});
+
+router.post("/refresh", function (req, res) {
+  const cookies = req.cookies;
+
+  if (!cookies?.jwt) return res.status(401).json({ message: "Unauthorized" });
+
+  const refreshToken = cookies.jwt;
+
+  jwt.verify(
+    refreshToken,
+    process.env.REFRESH_JWT_SECRET,
+    async (err, decoded) => {
+      if (err) return res.status(403).json({ message: "Forbidden" });
+
+      User.findOne({
+        attributes: [
+          [Sequelize.col("user.id"), "uid"],
+          "email",
+          "fullname",
+          [
+            Sequelize.fn(
+              "concat",
+              req.headers.host,
+              "/",
+              Sequelize.col("imgPath")
+            ),
+            "imgPath",
+          ],
+        ],
+        where: {
+          email: decoded.email,
+        },
+        // include: {
+        //   model: Role,
+        //   attributes: ["id", "role_name"],
+        // },
+      })
+        .then((user) => {
+          if (!user) {
+            return res.status(401).send({
+              message: "Unauthorized",
+            });
+          }
+
+          const accessToken = jwt.sign(
+            JSON.parse(JSON.stringify(user)),
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+          );
+
+          res.json({
+            success: true,
+            token: "JWT " + accessToken,
+          });
+        })
+        .catch((error) => res.status(400).send(error));
+    }
+  );
+});
+
+router.post("/signout", function (req, res) {
+  const cookies = req.cookies;
+  if (!cookies?.jwt) return res.sendStatus(204); //No content
+  res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true });
+  res.json({ message: "Cookie cleared" });
 });
 
 module.exports = router;

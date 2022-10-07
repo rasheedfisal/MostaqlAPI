@@ -8,6 +8,7 @@ const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
+const { getPagination, getPagingData } = require("../utils/pagination");
 
 // Create a new Role
 router.post(
@@ -53,14 +54,21 @@ router.get(
     session: false,
   }),
   function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "role_get_all")
       .then((rolePerm) => {
         console.log(rolePerm);
-        Role.findAll({
-          attributes: ["id", "role_name"],
+        Role.findAndCountAll({
+          limit,
+          offset,
+          attributes: ["id", "role_name", "role_description"],
         })
-          .then((roles) => res.status(200).send(roles))
+          .then((roles) => {
+            res.setHeader("x-total-count", roles.count);
+            res.status(200).send(getPagingData(roles, page, limit));
+          })
           .catch((error) => {
             res.status(400).send({
               success: false,
@@ -133,6 +141,7 @@ router.get(
       include: {
         model: Permission,
         as: "permissions",
+        attributes: ["id", "perm_name"],
       },
     })
       .then((roles) => res.status(200).send(roles))
@@ -152,6 +161,7 @@ router.put(
     session: false,
   }),
   function (req, res) {
+    console.log(req);
     helper
       .checkPermission(req.user.role_id, "role_update")
       .then((rolePerm) => {
@@ -179,9 +189,16 @@ router.put(
                 }
               )
                 .then((_) => {
-                  res.status(200).send({
-                    message: "Role updated",
-                  });
+                  // res.status(200).send({
+                  //   //message: "Role updated",
+                  //   //id: req.params.id,
+                  //   //data: {
+                  //   id: req.params.id,
+                  //   role_name: req.body.role_name,
+                  //   role_description: req.body.role_description,
+                  //   //},
+                  // });
+                  res.status(200).send(role);
                 })
                 .catch((err) =>
                   res.status(400).send({

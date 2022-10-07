@@ -7,7 +7,9 @@ const Permission = require("../models").Permission;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
+const Sequelize = require("sequelize");
 const helper = new Helper();
+const { getPagination, getPagingData } = require("../utils/pagination");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -91,10 +93,14 @@ router.get(
     session: false,
   }),
   function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "user_get_all")
       .then((rolePerm) => {
-        User.findAll({
+        User.findAndCountAll({
+          limit,
+          offset,
           include: [
             {
               model: Role,
@@ -106,8 +112,28 @@ router.get(
               ],
             },
           ],
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            [
+              Sequelize.fn(
+                "concat",
+                req.headers.host,
+                "/",
+                Sequelize.col("imgPath")
+              ),
+              "imgPath",
+            ],
+          ],
+          //group: ["id"],
+          distinct: true,
+          order: [["fullname", "ASC"]],
         })
-          .then((users) => res.status(200).send(users))
+          .then((users) => {
+            res.setHeader("x-total-count", users.count);
+            res.status(200).send(getPagingData(users, page, limit));
+          })
           .catch((error) => {
             res.status(400).send(error);
           });

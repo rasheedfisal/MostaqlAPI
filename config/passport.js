@@ -1,6 +1,7 @@
-require("dotenv").config();
 const JwtStrategy = require("passport-jwt").Strategy,
   ExtractJwt = require("passport-jwt").ExtractJwt;
+
+const Role = require("../models").Role;
 
 // load up the user model
 const User = require("../models").User;
@@ -13,7 +14,13 @@ module.exports = function (passport) {
   passport.use(
     "jwt",
     new JwtStrategy(opts, function (jwt_payload, done) {
-      User.findByPk(jwt_payload.id)
+      User.findByPk(jwt_payload.uid)
+        // User.findByPk(jwt_payload.uid, {
+        //   include: {
+        //     model: Role,
+        //     attributes: ["id", "role_name"],
+        //   },
+        // })
         .then((user) => {
           return done(null, user);
         })
