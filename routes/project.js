@@ -123,7 +123,7 @@ router.get(
           attributes: [
             "id",
             "proj_title",
-            "proj_decription",
+            "proj_description",
             "proj_period",
             "attatchment_file",
           ],
@@ -180,7 +180,7 @@ router.get(
       attributes: [
         "id",
         "proj_title",
-        "proj_decription",
+        "proj_description",
         "proj_period",
         "attatchment_file",
       ],

@@ -6,8 +6,10 @@ const router = express.Router();
 require("../config/passport")(passport);
 const User = require("../models").User;
 const loginLimiter = require("../middlewares/loginLimiter");
-// const Role = require("../models").Role;
+const Role = require("../models").Role;
+const Permission = require("../models").Permission;
 const Sequelize = require("sequelize");
+var fs = require("fs");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -20,6 +22,31 @@ const storage = multer.diskStorage({
     );
   },
 });
+
+const base64_encode = (filePath) => {
+  var bitmap = fs.readFileSync(`./${filePath}`);
+  return new Buffer.from(bitmap).toString("base64");
+};
+
+const mergeUserPermissions = (permissions) => {
+  let mergedPermission = [];
+  for (let i = 0; i < permissions.length; i++) {
+    mergedPermission.push(permissions[i].perm_name);
+  }
+
+  return mergedPermission;
+};
+
+const convertToUserInfoDto = (user) => {
+  const userInfoDto = {
+    uid: user.id,
+    email: user.email,
+    fullname: user.fullname,
+    imgPath: user.imgPath, //base64_encode(user.imgPath),
+    permissions: mergeUserPermissions(user.Role.permissions),
+  };
+  return userInfoDto;
+};
 
 const imageFilter = (req, file, cb) => {
   if (
@@ -76,22 +103,35 @@ router.post("/signup", upload.single("profileImage"), function (req, res) {
 router.post("/signin", loginLimiter, function (req, res) {
   User.findOne({
     attributes: [
-      [Sequelize.col("user.id"), "uid"],
+      //[Sequelize.col("user.id"), "uid"],
+      "id",
       "email",
       "fullname",
       "password",
+      //"imgPath",
       [
         Sequelize.fn("concat", req.headers.host, "/", Sequelize.col("imgPath")),
         "imgPath",
       ],
     ],
+    include: [
+      {
+        model: Role,
+        attributes: ["role_name"],
+        nested: false,
+        include: {
+          model: Permission,
+          as: "permissions",
+          attributes: ["perm_name"],
+          through: {
+            attributes: [],
+          },
+        },
+      },
+    ],
     where: {
       email: req.body.email,
     },
-    // include: {
-    //   model: Role,
-    //   attributes: ["id", "role_name"],
-    // },
   })
     .then((user) => {
       if (!user) {
@@ -101,19 +141,16 @@ router.post("/signin", loginLimiter, function (req, res) {
       }
       user.comparePassword(req.body.password, (err, isMatch) => {
         if (isMatch && !err) {
-          let userWithoutPassword = Object.assign(user);
-          userWithoutPassword.password = undefined;
+          const userDto = convertToUserInfoDto(user);
           var token = jwt.sign(
-            JSON.parse(JSON.stringify(userWithoutPassword)),
-            //JSON.parse(JSON.stringify(user)),
+            JSON.parse(JSON.stringify(userDto)),
             process.env.JWT_SECRET,
             {
               expiresIn: "15m", //86400 * 30 in seconds = 30 days
             }
           );
           const refreshToken = jwt.sign(
-            JSON.parse(JSON.stringify(userWithoutPassword)),
-            //JSON.parse(JSON.stringify(user)),
+            JSON.parse(JSON.stringify(userDto)),
             process.env.REFRESH_JWT_SECRET,
             { expiresIn: "1h" }
           );
@@ -127,7 +164,8 @@ router.post("/signin", loginLimiter, function (req, res) {
 
           res.json({
             success: true,
-            token: "JWT " + token,
+            //token: "JWT " + token,
+            token: token,
           });
         } else {
           res.status(401).send({
@@ -155,7 +193,8 @@ router.post("/refresh", function (req, res) {
 
       User.findOne({
         attributes: [
-          [Sequelize.col("user.id"), "uid"],
+          //[Sequelize.col("user.id"), "uid"],
+          "id",
           "email",
           "fullname",
           [
@@ -168,13 +207,24 @@ router.post("/refresh", function (req, res) {
             "imgPath",
           ],
         ],
+        include: [
+          {
+            model: Role,
+            attributes: ["role_name"],
+            nested: false,
+            include: {
+              model: Permission,
+              as: "permissions",
+              attributes: ["perm_name"],
+              through: {
+                attributes: [],
+              },
+            },
+          },
+        ],
         where: {
           email: decoded.email,
         },
-        // include: {
-        //   model: Role,
-        //   attributes: ["id", "role_name"],
-        // },
       })
         .then((user) => {
           if (!user) {
@@ -184,7 +234,7 @@ router.post("/refresh", function (req, res) {
           }
 
           const accessToken = jwt.sign(
-            JSON.parse(JSON.stringify(user)),
+            JSON.parse(JSON.stringify(convertToUserInfoDto(user))),
             process.env.JWT_SECRET,
             { expiresIn: "15m" }
           );
