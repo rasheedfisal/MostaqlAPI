@@ -42,10 +42,10 @@ const upload = multer({
 // Create a new Category
 router.post(
   "/",
+  upload.single("CategoryImg"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("CategoryImg"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "category_add")
@@ -120,10 +120,10 @@ router.get(
 // Update a Category
 router.put(
   "/:id",
+  upload.single("CategoryImg"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("CategoryImg"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "category_update")

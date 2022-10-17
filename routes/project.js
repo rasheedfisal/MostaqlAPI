@@ -10,6 +10,9 @@ const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
+const Sequelize = require("sequelize");
+const { getPagination, getPagingData } = require("../utils/pagination");
+const { getPath } = require("../utils/fileUrl");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -50,16 +53,15 @@ const upload = multer({
 // Create a new Project
 router.post(
   "/",
+  upload.single("ProjectAttach"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("ProjectAttach"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "project_add")
       .then((rolePerm) => {
         if (
-          !req.body.user_added_id ||
           !req.body.proj_title ||
           !req.body.proj_description ||
           !req.body.category_id ||
@@ -77,7 +79,7 @@ router.post(
           })
             .then((status) => {
               Project.create({
-                user_added_id: req.body.user_added_id,
+                user_added_id: req.user?.id,
                 proj_title: req.body.proj_title,
                 proj_description: req.body.proj_description,
                 category_id: req.body.category_id,
@@ -115,38 +117,52 @@ router.get(
     session: false,
   }),
   function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "project_get_all")
       .then((rolePerm) => {
         console.log(rolePerm);
-        Project.findAll({
+        Project.findAndCountAll({
+          limit,
+          offset,
           attributes: [
             "id",
             "proj_title",
             "proj_description",
             "proj_period",
-            "attatchment_file",
+            "CreatedAt",
+            getPath(req, "attatchment_file"),
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id)`
+              ),
+              "OffersCount",
+            ],
           ],
           include: [
             {
               model: User,
-              attributes: ["id", "email", "fullname", "phone", "imgPath"],
+              attributes: ["fullname", "imgPath"],
             },
             {
               model: Category,
-              attributes: ["id", "cat_name", "cat_img"],
+              attributes: ["cat_name", "cat_img"],
             },
             {
               model: PriceRange,
-              attributes: ["id", "range_name"],
+              attributes: ["range_name"],
             },
             {
               model: ProjStatus,
-              attributes: ["id", "stat_name"],
+              attributes: ["stat_name"],
             },
           ],
+          distinct: true,
         })
-          .then((project) => res.status(200).send(project))
+          .then((projects) =>
+            res.status(200).send(getPagingData(projects, page, limit))
+          )
           .catch((error) => {
             res.status(400).send({
               success: false,
@@ -182,24 +198,38 @@ router.get(
         "proj_title",
         "proj_description",
         "proj_period",
-        "attatchment_file",
+        "CreatedAt",
+        getPath(req, "attatchment_file"),
+        ,
+        [
+          Sequelize.literal(
+            `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id AND offer.user_offered_id = "${req.user?.id}")`
+          ),
+          "UserOfferCount",
+        ],
+        [
+          Sequelize.literal(
+            `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id)`
+          ),
+          "OffersCount",
+        ],
       ],
       include: [
         {
           model: User,
-          attributes: ["id", "email", "fullname", "phone", "imgPath"],
+          attributes: ["fullname", getPath(req, "imgPath")],
         },
         {
           model: Category,
-          attributes: ["id", "cat_name", "cat_img"],
+          attributes: ["cat_name", getPath(req, "cat_img")],
         },
         {
           model: PriceRange,
-          attributes: ["id", "range_name"],
+          attributes: ["range_name"],
         },
         {
           model: ProjStatus,
-          attributes: ["id", "stat_name"],
+          attributes: ["stat_name"],
         },
       ],
     })
@@ -216,10 +246,10 @@ router.get(
 // Update a Project
 router.put(
   "/:id",
+  upload.single("ProjectAttach"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("ProjectAttach"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "project_update")

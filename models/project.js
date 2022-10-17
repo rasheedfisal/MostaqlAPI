@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
+      Project.hasMany(models.ProjectOffer, {
+        foreignKey: "proj_id",
+        as: "projectoffers",
+      });
       Project.belongsTo(models.User, {
         foreignKey: "user_added_id",
       });
@@ -63,6 +67,23 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
+      // IsOffered: {
+      //   type: new DataTypes.VIRTUAL(DataTypes.BOOLEAN, ["id"]),
+      //   get: function () {
+      //     const user_logged_in = this.query.request.user.id;
+      //     sequelize.models.ProjectOffer.findOne({
+      //       where: {
+      //         user_offered_id: user_logged_in,
+      //         proj_id: this.get("id"),
+      //       },
+      //     }).then((offer) => {
+      //       if (!offer) {
+      //         return false;
+      //       }
+      //       return true;
+      //     });
+      //   },
+      // },
     },
     {
       sequelize,

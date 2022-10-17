@@ -64,9 +64,10 @@ router.get(
           limit,
           offset,
           attributes: ["id", "role_name", "role_description"],
+          distinct: true,
         })
           .then((roles) => {
-            res.setHeader("x-total-count", roles.count);
+            //res.setHeader("x-total-count", roles.count);
             res.status(200).send(getPagingData(roles, page, limit));
           })
           .catch((error) => {

@@ -8,8 +8,8 @@ const User = require("../models").User;
 const loginLimiter = require("../middlewares/loginLimiter");
 const Role = require("../models").Role;
 const Permission = require("../models").Permission;
-const Sequelize = require("sequelize");
-var fs = require("fs");
+const { getPath } = require("../utils/fileUrl");
+//var fs = require("fs");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -23,10 +23,10 @@ const storage = multer.diskStorage({
   },
 });
 
-const base64_encode = (filePath) => {
-  var bitmap = fs.readFileSync(`./${filePath}`);
-  return new Buffer.from(bitmap).toString("base64");
-};
+// const base64_encode = (filePath) => {
+//   var bitmap = fs.readFileSync(`./${filePath}`);
+//   return new Buffer.from(bitmap).toString("base64");
+// };
 
 const mergeUserPermissions = (permissions) => {
   let mergedPermission = [];
@@ -109,10 +109,7 @@ router.post("/signin", loginLimiter, function (req, res) {
       "fullname",
       "password",
       //"imgPath",
-      [
-        Sequelize.fn("concat", req.headers.host, "/", Sequelize.col("imgPath")),
-        "imgPath",
-      ],
+      getPath(req, "imgPath"),
     ],
     include: [
       {
@@ -197,15 +194,7 @@ router.post("/refresh", function (req, res) {
           "id",
           "email",
           "fullname",
-          [
-            Sequelize.fn(
-              "concat",
-              req.headers.host,
-              "/",
-              Sequelize.col("imgPath")
-            ),
-            "imgPath",
-          ],
+          getPath(req, "imgPath"),
         ],
         include: [
           {

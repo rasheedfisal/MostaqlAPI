@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models").User;
 const Role = require("../models").Role;
+const Project = require("../models").Project;
+const Profile = require("../models").Profile;
+const PriceRange = require("../models").PriceRange;
 const multer = require("multer");
 const Permission = require("../models").Permission;
 const passport = require("passport");
@@ -10,6 +13,7 @@ const Helper = require("../utils/helper");
 const Sequelize = require("sequelize");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
+const { getPath } = require("../utils/fileUrl");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -46,10 +50,10 @@ const upload = multer({
 // Create a new User
 router.post(
   "/",
+  upload.single("profileImage"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("profileImage"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "user_add")
@@ -112,26 +116,13 @@ router.get(
               ],
             },
           ],
-          attributes: [
-            "id",
-            "email",
-            "fullname",
-            [
-              Sequelize.fn(
-                "concat",
-                req.headers.host,
-                "/",
-                Sequelize.col("imgPath")
-              ),
-              "imgPath",
-            ],
-          ],
+          attributes: ["id", "email", "fullname", getPath(req, "imgPath")],
           //group: ["id"],
           distinct: true,
           order: [["fullname", "ASC"]],
         })
           .then((users) => {
-            res.setHeader("x-total-count", users.count);
+            //res.setHeader("x-total-count", users.count);
             res.status(200).send(getPagingData(users, page, limit));
           })
           .catch((error) => {
@@ -155,6 +146,7 @@ router.get(
       .checkPermission(req.user.role_id, "user_get")
       .then((rolePerm) => {
         User.findByPk(req.params.id, {
+          attributes: ["id", "email", "fullname", getPath(req, "imgPath")],
           include: {
             model: Role,
             attributes: ["id", "role_name"],
@@ -174,10 +166,10 @@ router.get(
 // Update a User
 router.put(
   "/:id",
+  upload.single("profileImage"),
   passport.authenticate("jwt", {
     session: false,
   }),
-  upload.single("profileImage"),
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "role_update")
@@ -265,6 +257,33 @@ router.delete(
               res.status(400).send(error);
             });
         }
+      })
+      .catch((error) => {
+        res.status(403).send(error);
+      });
+  }
+);
+
+// Get User Project by ID
+router.get(
+  "/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_get_project")
+      .then((rolePerm) => {
+        User.findByPk(req.params.id, {
+          include: {
+            model: Role,
+            attributes: ["id", "role_name"],
+          },
+        })
+          .then((user) => {})
+          .catch((error) => {
+            res.status(400).send(error);
+          });
       })
       .catch((error) => {
         res.status(403).send(error);

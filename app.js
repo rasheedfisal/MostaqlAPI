@@ -16,6 +16,7 @@ var RangeRouter = require("./routes/pricerange");
 var CategoryRouter = require("./routes/category");
 var UserProfileRouter = require("./routes/userprofile");
 var ProjectRouter = require("./routes/project");
+var ProjectOfferRouter = require("./routes/projectoffers");
 
 var app = express();
 
@@ -43,6 +44,7 @@ app.use(`${apiV1}/pricerange`, RangeRouter);
 app.use(`${apiV1}/category`, CategoryRouter);
 app.use(`${apiV1}/profile`, UserProfileRouter);
 app.use(`${apiV1}/project`, ProjectRouter);
+app.use(`${apiV1}/offer`, ProjectOfferRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
