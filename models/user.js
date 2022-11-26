@@ -19,8 +19,16 @@ module.exports = (sequelize, DataTypes) => {
         as: "userprofiles",
       });
       User.hasMany(models.ProjectOffer, {
-        foreignKey: "user_id",
+        foreignKey: "user_offered_id",
         as: "projectoffers",
+      });
+      User.hasMany(models.Conversation, {
+        foreignKey: "sender_id",
+        as: "sender",
+      });
+      User.hasMany(models.Conversation, {
+        foreignKey: "receiver_id",
+        as: "receiver",
       });
       User.belongsTo(models.Role, {
         foreignKey: "role_id",
@@ -61,6 +69,11 @@ module.exports = (sequelize, DataTypes) => {
       imgPath: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
       },
     },
     {

@@ -74,29 +74,30 @@ router.post("/signup", upload.single("profileImage"), function (req, res) {
       msg: "Please pass username, password and name.",
     });
   } else {
-    // Role.findOne({
-    //   where: {
-    //     role_name: "basic",
-    //   },
-    // })
-    //   .then((role) => {
-    //console.log(role.id);
-    User.create({
-      email: req.body.email,
-      password: req.body.password,
-      fullname: req.body.fullname,
-      phone: req.body.phone,
-      imgPath: req.file?.path,
-      role_id: req.body.id,
+    Role.findOne({
+      where: {
+        role_name: "admin", // TODO: change in the future with non admin role
+      },
     })
-      .then((user) => res.status(201).send(user))
+      .then((role) => {
+        //console.log(role.id);
+        User.create({
+          email: req.body.email,
+          password: req.body.password,
+          fullname: req.body.fullname,
+          phone: req.body.phone,
+          imgPath: req.file?.path,
+          //role_id: req.body.id,
+          role_id: role.id,
+        })
+          .then((user) => res.status(201).send(user))
+          .catch((error) => {
+            res.status(400).send(error);
+          });
+      })
       .catch((error) => {
         res.status(400).send(error);
       });
-    // })
-    // .catch((error) => {
-    //   res.status(400).send(error);
-    // });
   }
 });
 
@@ -108,6 +109,7 @@ router.post("/signin", loginLimiter, function (req, res) {
       "email",
       "fullname",
       "password",
+      "is_active",
       //"imgPath",
       getPath(req, "imgPath"),
     ],
@@ -136,6 +138,12 @@ router.post("/signin", loginLimiter, function (req, res) {
           message: "Authentication failed. User not found.",
         });
       }
+      if (!user.is_active) {
+        return res.status(401).send({
+          message: "User Account is Locked.",
+        });
+      }
+
       user.comparePassword(req.body.password, (err, isMatch) => {
         if (isMatch && !err) {
           const userDto = convertToUserInfoDto(user);

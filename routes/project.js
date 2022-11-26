@@ -6,6 +6,8 @@ const Project = require("../models").Project;
 const ProjStatus = require("../models").ProjStatus;
 const Category = require("../models").Category;
 const PriceRange = require("../models").PriceRange;
+const ProjectOffer = require("../models").ProjectOffer;
+const UserProfile = require("../models").UserProfile;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
@@ -122,7 +124,7 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "project_get_all")
       .then((rolePerm) => {
-        console.log(rolePerm);
+        //console.log(rolePerm);
         Project.findAndCountAll({
           limit,
           offset,
@@ -143,11 +145,11 @@ router.get(
           include: [
             {
               model: User,
-              attributes: ["fullname", "imgPath"],
+              attributes: ["fullname", getPath(req, "imgPath")],
             },
             {
               model: Category,
-              attributes: ["cat_name", "cat_img"],
+              attributes: ["cat_name", getPath(req, "cat_img")],
             },
             {
               model: PriceRange,
@@ -180,68 +182,68 @@ router.get(
 );
 
 // Get Project by ID
-router.get(
-  "/:id",
-  passport.authenticate("jwt", {
-    session: false,
-  }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "project_get")
-      .then((rolePerm) => {})
-      .catch((error) => {
-        res.status(403).send(error);
-      });
-    Project.findByPk(req.params.id, {
-      attributes: [
-        "id",
-        "proj_title",
-        "proj_description",
-        "proj_period",
-        "CreatedAt",
-        getPath(req, "attatchment_file"),
-        ,
-        [
-          Sequelize.literal(
-            `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id AND offer.user_offered_id = "${req.user?.id}")`
-          ),
-          "UserOfferCount",
-        ],
-        [
-          Sequelize.literal(
-            `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id)`
-          ),
-          "OffersCount",
-        ],
-      ],
-      include: [
-        {
-          model: User,
-          attributes: ["fullname", getPath(req, "imgPath")],
-        },
-        {
-          model: Category,
-          attributes: ["cat_name", getPath(req, "cat_img")],
-        },
-        {
-          model: PriceRange,
-          attributes: ["range_name"],
-        },
-        {
-          model: ProjStatus,
-          attributes: ["stat_name"],
-        },
-      ],
-    })
-      .then((project) => res.status(200).send(project))
-      .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
-      });
-  }
-);
+// router.get(
+//   "/:id",
+//   passport.authenticate("jwt", {
+//     session: false,
+//   }),
+//   function (req, res) {
+//     helper
+//       .checkPermission(req.user.role_id, "project_get")
+//       .then((rolePerm) => {})
+//       .catch((error) => {
+//         res.status(403).send(error);
+//       });
+//     Project.findByPk(req.params.id, {
+//       attributes: [
+//         "id",
+//         "proj_title",
+//         "proj_description",
+//         "proj_period",
+//         "CreatedAt",
+//         getPath(req, "attatchment_file"),
+//         ,
+//         [
+//           Sequelize.literal(
+//             `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id AND offer.user_offered_id = "${req.user?.id}")`
+//           ),
+//           "UserOfferCount",
+//         ],
+//         [
+//           Sequelize.literal(
+//             `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id)`
+//           ),
+//           "OffersCount",
+//         ],
+//       ],
+//       include: [
+//         {
+//           model: User,
+//           attributes: ["fullname", getPath(req, "imgPath")],
+//         },
+//         {
+//           model: Category,
+//           attributes: ["cat_name", getPath(req, "cat_img")],
+//         },
+//         {
+//           model: PriceRange,
+//           attributes: ["range_name"],
+//         },
+//         {
+//           model: ProjStatus,
+//           attributes: ["stat_name"],
+//         },
+//       ],
+//     })
+//       .then((project) => res.status(200).send(project))
+//       .catch((error) => {
+//         res.status(400).send({
+//           success: false,
+//           msg: error,
+//         });
+//       });
+//   }
+// );
 
 // Update a Project
 router.put(
@@ -363,6 +365,202 @@ router.delete(
         }
       })
       .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get owner Projects by ID
+router.get(
+  "/owner",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_get_project")
+      .then((rolePerm) => {
+        Project.findAll({
+          attributes: [
+            "id",
+            "proj_title",
+            "proj_description",
+            "proj_period",
+            "CreatedAt",
+            //getPath(req, "attatchment_file"),
+            // [
+            //   Sequelize.literal(
+            //     `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id AND offer.user_offered_id = "${req.user?.id}")`
+            //   ),
+            //   "UserOfferCount",
+            // ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
+              ),
+              "OffersCount",
+            ],
+          ],
+          include: [
+            {
+              model: Category,
+              attributes: ["cat_name", getPath(req, "cat_img")],
+            },
+            {
+              model: PriceRange,
+              attributes: ["range_name"],
+            },
+            {
+              model: ProjStatus,
+              attributes: ["stat_name"],
+            },
+          ],
+          where: {
+            user_added_id: req.user?.id,
+          },
+        })
+          .then((projects) => res.status(200).send(projects))
+          .catch((error) => {
+            res.status(400).send(error);
+          });
+      })
+      .catch((error) => {
+        res.status(403).send(error);
+      });
+  }
+);
+
+// Get Project by ID
+router.get(
+  "/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    // const { page, size } = req.query;
+    // const { limit, offset } = getPagination(page, size);
+
+    console.log(req.user.role_id);
+    //res.status(200).send(req.user.role_id);
+    helper
+      .checkPermission(req.user.role_id, "project_get")
+      .then((rolePerm) => {
+        //console.log(rolePerm);
+        Project.findByPk(req.params.id, {
+          // limit,
+          // offset,
+          attributes: [
+            "id",
+            "proj_title",
+            "proj_description",
+            "proj_period",
+            "CreatedAt",
+            getPath(req, "attatchment_file"),
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = "${req.params.id}" AND offer.user_offered_id = "${req.user?.id}")`
+              ),
+              "UserOfferCount", // if UserOfferCount > 0 then he should not make another offer
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projects AS project WHERE project.id = "${req.params.id}" AND project.user_added_id = "${req.user?.id}")`
+              ),
+              "IsProjectOwner", // if IsProjectOwner > 0 then the current user is the owner of this project
+            ],
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = "${req.params.id}")`
+              ),
+              "OffersCount",
+            ],
+          ],
+          include: [
+            {
+              model: User,
+              as: "owner",
+              attributes: [
+                "fullname",
+                [
+                  Sequelize.fn(
+                    "concat",
+                    req.headers.host,
+                    "/",
+                    Sequelize.col("owner.imgPath")
+                  ),
+                  "avatar",
+                ],
+              ],
+              //attributes: ["fullname"],
+            },
+            {
+              model: Category,
+              attributes: ["cat_name", getPath(req, "cat_img")],
+            },
+            {
+              model: PriceRange,
+              attributes: ["range_name"],
+            },
+            {
+              model: ProjStatus,
+              attributes: ["stat_name"],
+            },
+            {
+              model: ProjectOffer,
+              as: "projectoffers",
+              attributes: [
+                "id",
+                "proj_id",
+                "user_offered_id",
+                "price",
+                "days_to_deliver",
+                "message_desc",
+                getPath(req, "pdf_url"),
+              ],
+              include: [
+                {
+                  model: User,
+                  as: "client",
+                  attributes: [
+                    "fullname",
+                    [
+                      Sequelize.fn(
+                        "concat",
+                        req.headers.host,
+                        "/",
+                        Sequelize.col("projectoffers.client.imgPath")
+                      ),
+                      "avatar",
+                    ],
+                  ],
+                  include: {
+                    model: UserProfile,
+                    as: "userprofiles",
+                    attributes: ["about_user", "specialization"],
+                  },
+                },
+              ],
+            },
+          ],
+          // where: {
+          //   id: req.params.id,
+          // },
+          //distinct: true,
+        })
+          .then((projectDetails) => res.status(200).send(projectDetails))
+          .catch((error) => {
+            console.log(error);
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        console.log(error);
         res.status(403).send({
           success: false,
           msg: error,

@@ -116,7 +116,13 @@ router.get(
               ],
             },
           ],
-          attributes: ["id", "email", "fullname", getPath(req, "imgPath")],
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            getPath(req, "imgPath"),
+            "is_active",
+          ],
           //group: ["id"],
           distinct: true,
           order: [["fullname", "ASC"]],
@@ -146,7 +152,13 @@ router.get(
       .checkPermission(req.user.role_id, "user_get")
       .then((rolePerm) => {
         User.findByPk(req.params.id, {
-          attributes: ["id", "email", "fullname", getPath(req, "imgPath")],
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            getPath(req, "imgPath"),
+            "is_active",
+          ],
           include: {
             model: Role,
             attributes: ["id", "role_name"],
@@ -172,7 +184,7 @@ router.put(
   }),
   function (req, res) {
     helper
-      .checkPermission(req.user.role_id, "role_update")
+      .checkPermission(req.user.role_id, "user_update")
       .then((rolePerm) => {
         if (
           !req.body.role_id ||
@@ -257,33 +269,6 @@ router.delete(
               res.status(400).send(error);
             });
         }
-      })
-      .catch((error) => {
-        res.status(403).send(error);
-      });
-  }
-);
-
-// Get User Project by ID
-router.get(
-  "/:id",
-  passport.authenticate("jwt", {
-    session: false,
-  }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "user_get_project")
-      .then((rolePerm) => {
-        User.findByPk(req.params.id, {
-          include: {
-            model: Role,
-            attributes: ["id", "role_name"],
-          },
-        })
-          .then((user) => {})
-          .catch((error) => {
-            res.status(400).send(error);
-          });
       })
       .catch((error) => {
         res.status(403).send(error);

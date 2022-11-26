@@ -1,24 +1,22 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class ProjectOffer extends Model {
+  class Conversation extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
-      ProjectOffer.belongsTo(models.Project, {
-        foreignKey: "proj_id",
+      Conversation.belongsTo(models.User, {
+        foreignKey: "sender_id",
       });
-      ProjectOffer.belongsTo(models.User, {
-        foreignKey: "user_offered_id",
-        as: "client",
+      Conversation.belongsTo(models.User, {
+        foreignKey: "receiver_id",
       });
     }
   }
-  ProjectOffer.init(
+  Conversation.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -26,45 +24,33 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      proj_id: {
+      sender_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
+        // references: {
+        //   model: "users",
+        //   key: "id",
+        // },
       },
-      user_offered_id: {
+      receiver_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
+        // references: {
+        //   model: "users",
+        //   key: "id",
+        // },
       },
-      price: {
-        type: DataTypes.DECIMAL,
-        allowNull: false,
-      },
-      days_to_deliver: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-      message_desc: {
+      message: {
         type: DataTypes.STRING,
         allowNull: false,
-      },
-      pdf_url: {
-        type: DataTypes.STRING,
-        allowNull: true,
       },
     },
-    // {
-    //   indexes: [
-    //     {
-    //       unique: true,
-    //       fields: ["user_offered_id", "proj_id"],
-    //     },
-    //   ],
-    // },
     {
       sequelize,
-      modelName: "ProjectOffer",
+      modelName: "Conversation",
     }
   );
-  return ProjectOffer;
+  return Conversation;
 };

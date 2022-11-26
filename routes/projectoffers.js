@@ -97,129 +97,67 @@ router.post(
 );
 
 // Get List of Project offers
-router.get(
-  "/project/:id",
-  passport.authenticate("jwt", {
-    session: false,
-  }),
-  function (req, res) {
-    const { page, size } = req.query;
-    const { limit, offset } = getPagination(page, size);
-    helper
-      .checkPermission(req.user.role_id, "project_offer_get_all")
-      .then((rolePerm) => {
-        console.log(rolePerm);
-        ProjectOffer.findAndCountAll({
-          limit,
-          offset,
-          attributes: [
-            "id",
-            "price",
-            "days_to_deliver",
-            "message_desc",
-            getPath(req, "pdf_url"),
-          ],
-          include: [
-            {
-              model: User,
-              attributes: [
-                "id",
-                "email",
-                "fullname",
-                "phone",
-                getPath(req, "imgPath"),
-              ],
-              include: {
-                model: UserProfile,
-                attributes: ["about_user", "specialization"],
-              },
-            },
-          ],
-          where: {
-            proj_id: req.params.id,
-          },
-          distinct: true,
-        })
-          .then((offers) =>
-            res.status(200).send(getPagingData(offers, page, limit))
-          )
-          .catch((error) => {
-            res.status(400).send({
-              success: false,
-              msg: error,
-            });
-          });
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
-        });
-      });
-  }
-);
-
-// Get List of User Project offers
-router.get(
-  "/owner/project/:id",
-  passport.authenticate("jwt", {
-    session: false,
-  }),
-  function (req, res) {
-    const { page, size } = req.query;
-    const { limit, offset } = getPagination(page, size);
-    helper
-      .checkPermission(req.user.role_id, "owner_project_offer_get_all")
-      .then((rolePerm) => {
-        console.log(rolePerm);
-        Project.findAndCountAll({
-          limit,
-          offset,
-          attributes: [],
-          include: [
-            {
-              model: ProjectOffer,
-              attributes: [
-                "id",
-                "price",
-                "days_to_deliver",
-                "message_desc",
-                getPath(req, "pdf_url"),
-              ],
-            },
-            {
-              model: User,
-              attributes: ["fullname", getPath(req, "imgPath")],
-              include: {
-                model: UserProfile,
-                attributes: ["about_user", "specialization"],
-              },
-            },
-          ],
-          where: {
-            id: req.params.id,
-            user_added_id: req.user.id,
-          },
-          distinct: true,
-        })
-          .then((offers) =>
-            res.status(200).send(getPagingData(offers, page, limit))
-          )
-          .catch((error) => {
-            res.status(400).send({
-              success: false,
-              msg: error,
-            });
-          });
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
-        });
-      });
-  }
-);
+// router.get(
+//   "/project/:id",
+//   passport.authenticate("jwt", {
+//     session: false,
+//   }),
+//   function (req, res) {
+//     const { page, size } = req.query;
+//     const { limit, offset } = getPagination(page, size);
+//     helper
+//       .checkPermission(req.user.role_id, "project_offer_get_all")
+//       .then((rolePerm) => {
+//         console.log(rolePerm);
+//         ProjectOffer.findAndCountAll({
+//           limit,
+//           offset,
+//           attributes: [
+//             "id",
+//             "price",
+//             "days_to_deliver",
+//             "message_desc",
+//             getPath(req, "pdf_url"),
+//           ],
+//           include: [
+//             {
+//               model: User,
+//               attributes: [
+//                 "id",
+//                 "email",
+//                 "fullname",
+//                 "phone",
+//                 getPath(req, "imgPath"),
+//               ],
+//               include: {
+//                 model: UserProfile,
+//                 attributes: ["about_user", "specialization"],
+//               },
+//             },
+//           ],
+//           where: {
+//             proj_id: req.params.id,
+//           },
+//           distinct: true,
+//         })
+//           .then((offers) =>
+//             res.status(200).send(getPagingData(offers, page, limit))
+//           )
+//           .catch((error) => {
+//             res.status(400).send({
+//               success: false,
+//               msg: error,
+//             });
+//           });
+//       })
+//       .catch((error) => {
+//         res.status(403).send({
+//           success: false,
+//           msg: error,
+//         });
+//       });
+//   }
+// );
 
 // Update a Project
 // router.put(
