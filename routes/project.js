@@ -137,7 +137,7 @@ router.get(
             getPath(req, "attatchment_file"),
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = id)`
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
               ),
               "OffersCount",
             ],
@@ -145,7 +145,19 @@ router.get(
           include: [
             {
               model: User,
-              attributes: ["fullname", getPath(req, "imgPath")],
+              as: "owner",
+              attributes: [
+                "fullname",
+                [
+                  Sequelize.fn(
+                    "concat",
+                    req.headers.host,
+                    "/",
+                    Sequelize.col("owner.imgPath")
+                  ),
+                  "avatar",
+                ],
+              ],
             },
             {
               model: Category,
