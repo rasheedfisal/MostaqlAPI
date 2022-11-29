@@ -269,16 +269,18 @@ router.put(
       .checkPermission(req.user.role_id, "project_update")
       .then((rolePerm) => {
         if (
-          !req.params.id ||
-          !req.body.user_added_id ||
-          !req.body.proj_title ||
-          !req.body.proj_description ||
-          !req.body.category_id ||
-          !req.body.price_range_id ||
-          !req.body.proj_period
+          !req.params.id
+          // !req.params.id ||
+          // !req.body.user_added_id ||
+          // !req.body.proj_title ||
+          // !req.body.proj_description ||
+          // !req.body.category_id ||
+          // !req.body.price_range_id ||
+          // !req.body.proj_period
         ) {
           res.status(400).send({
-            msg: "Please pass ID and required fields.",
+            //msg: "Please pass ID and required fields.",
+            msg: "Please pass ID and fields you want to update.",
           });
         } else {
           Project.findByPk(req.params.id)
