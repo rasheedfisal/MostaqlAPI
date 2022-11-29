@@ -87,7 +87,7 @@ router.post(
                 category_id: req.body.category_id,
                 price_range_id: req.body.price_range_id,
                 proj_period: req.body.proj_period,
-                attachment_file: req.file?.path,
+                attatchment_file: req.file?.path,
                 proj_status_id: status.id,
               })
                 .then((profile) => res.status(201).send(profile))
@@ -296,7 +296,7 @@ router.put(
                   price_range_id:
                     req.body.price_range_id || project.price_range_id,
                   proj_period: req.body.proj_period || project.proj_period,
-                  attachment_file: req.file?.path || project.attachment_file,
+                  attatchment_file: req.file?.path || project.attachment_file,
                   proj_status_id:
                     req.body.proj_status_id || project.proj_status_id,
                 },
