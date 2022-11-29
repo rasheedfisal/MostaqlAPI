@@ -296,7 +296,7 @@ router.put(
                   price_range_id:
                     req.body.price_range_id || project.price_range_id,
                   proj_period: req.body.proj_period || project.proj_period,
-                  attatchment_file: req.file?.path || project.attachment_file,
+                  attatchment_file: req.file?.path || project.attatchment_file,
                   proj_status_id:
                     req.body.proj_status_id || project.proj_status_id,
                 },
