@@ -36,7 +36,8 @@ const imageFilter = (req, file, cb) => {
     file.mimetype === "text/plain" ||
     file.mimetype === "application/vnd.ms-excel" ||
     file.mimetype ===
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.mimetype === "application/pdf"
   ) {
     cb(null, true);
   } else {
