@@ -33,7 +33,6 @@ const mergeUserPermissions = (permissions) => {
   for (let i = 0; i < permissions.length; i++) {
     mergedPermission.push(permissions[i].perm_name);
   }
-
   return mergedPermission;
 };
 
@@ -42,8 +41,8 @@ const convertToUserInfoDto = (user) => {
     uid: user.id,
     email: user.email,
     fullname: user.fullname,
-    imgPath: user.imgPath, //base64_encode(user.imgPath),
-    permissions: mergeUserPermissions(user.Role.permissions),
+    // imgPath: user.imgPath, //base64_encode(user.imgPath),
+    // permissions: mergeUserPermissions(user.Role.permissions),
   };
   return userInfoDto;
 };
@@ -151,20 +150,20 @@ router.post("/signin", loginLimiter, function (req, res) {
             JSON.parse(JSON.stringify(userDto)),
             process.env.JWT_SECRET,
             {
-              expiresIn: "15m", //86400 * 30 in seconds = 30 days
+              expiresIn: "1h", //86400 * 30 in seconds = 30 days
             }
           );
           const refreshToken = jwt.sign(
             JSON.parse(JSON.stringify(userDto)),
             process.env.REFRESH_JWT_SECRET,
-            { expiresIn: "1h" }
+            { expiresIn: "1d" }
           );
 
           res.cookie("jwt", refreshToken, {
             httpOnly: true, //accessible only by web server
             secure: true, //https
             sameSite: "None", //cross-site cookie
-            maxAge: 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
+            maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
 
           res.json({
@@ -183,7 +182,7 @@ router.post("/signin", loginLimiter, function (req, res) {
     .catch((error) => res.status(400).send(error));
 });
 
-router.post("/refresh", function (req, res) {
+router.get("/refresh", function (req, res) {
   const cookies = req.cookies;
 
   if (!cookies?.jwt) return res.status(401).json({ message: "Unauthorized" });
@@ -233,12 +232,12 @@ router.post("/refresh", function (req, res) {
           const accessToken = jwt.sign(
             JSON.parse(JSON.stringify(convertToUserInfoDto(user))),
             process.env.JWT_SECRET,
-            { expiresIn: "15m" }
+            { expiresIn: "1h" }
           );
 
           res.json({
             success: true,
-            token: "JWT " + accessToken,
+            token: accessToken,
           });
         })
         .catch((error) => res.status(400).send(error));

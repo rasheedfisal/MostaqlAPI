@@ -46,15 +46,15 @@ router.get(
     session: false,
   }),
   function (req, res) {
-    const { page, size } = req.query;
-    const { limit, offset } = getPagination(page, size);
+    // const { page, size } = req.query;
+    // const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "permissions_get_all")
       .then((rolePerm) => {
-        Permission.findAndCountAll({ limit, offset })
+        Permission.findAll()
+          // Permission.findAndCountAll({ limit, offset })
           .then((perms) => {
-            res.setHeader("content-range", perms.count);
-            res.status(200).send(getPagingData(perms, page, limit));
+            res.status(200).send(perms);
           })
           .catch((error) => {
             res.status(400).send(error);

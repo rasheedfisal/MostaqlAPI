@@ -155,6 +155,37 @@ router.get(
   }
 );
 
+// Get Role Permission by RoleID
+router.get(
+  "/permissions/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "role_get")
+      .then((rolePerm) => {})
+      .catch((error) => {
+        res.status(403).send(error);
+      });
+    Role.findByPk(req.params.id, {
+      attributes: [],
+      include: {
+        model: Permission,
+        as: "permissions",
+        attributes: ["id", "perm_name"],
+      },
+    })
+      .then((permissions) => res.status(200).send(permissions))
+      .catch((error) => {
+        res.status(400).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
 // Update a Role
 router.put(
   "/:id",

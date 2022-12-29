@@ -6,6 +6,7 @@ var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
+const verifyJWT = require("./middlewares/verifyJWT");
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
@@ -37,6 +38,9 @@ const apiV1 = "/api/v1";
 
 app.use("/", indexRouter);
 app.use(`${apiV1}/auth`, authRouter);
+
+app.use(verifyJWT);
+
 app.use(`${apiV1}/users`, usersRouter);
 app.use(`${apiV1}/roles`, rolesRouter);
 app.use(`${apiV1}/permissions`, permsRouter);

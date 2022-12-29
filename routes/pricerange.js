@@ -58,7 +58,7 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "range_get_all")
       .then((rolePerm) => {
-        console.log(rolePerm);
+        // console.log(rolePerm);
         PriceRange.findAll({
           attributes: ["id", "range_name", "range_from", "range_to"],
         })
@@ -88,17 +88,18 @@ router.get(
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "range_get")
-      .then((rolePerm) => {})
+      .then((rolePerm) => {
+        PriceRange.findByPk(req.params.id)
+          .then((range) => res.status(200).send(range))
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
       .catch((error) => {
         res.status(403).send(error);
-      });
-    PriceRange.findByPk(req.params.id)
-      .then((range) => res.status(200).send(range))
-      .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
       });
   }
 );
