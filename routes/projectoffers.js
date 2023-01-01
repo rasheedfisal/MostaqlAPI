@@ -10,6 +10,7 @@ const Helper = require("../utils/helper");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
+const Sequelize = require("sequelize");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -97,68 +98,83 @@ router.post(
   }
 );
 
-// Get List of Project offers
-// router.get(
-//   "/project/:id",
-//   passport.authenticate("jwt", {
-//     session: false,
-//   }),
-//   function (req, res) {
-//     const { page, size } = req.query;
-//     const { limit, offset } = getPagination(page, size);
-//     helper
-//       .checkPermission(req.user.role_id, "project_offer_get_all")
-//       .then((rolePerm) => {
-//         console.log(rolePerm);
-//         ProjectOffer.findAndCountAll({
-//           limit,
-//           offset,
-//           attributes: [
-//             "id",
-//             "price",
-//             "days_to_deliver",
-//             "message_desc",
-//             getPath(req, "pdf_url"),
-//           ],
-//           include: [
-//             {
-//               model: User,
-//               attributes: [
-//                 "id",
-//                 "email",
-//                 "fullname",
-//                 "phone",
-//                 getPath(req, "imgPath"),
-//               ],
-//               include: {
-//                 model: UserProfile,
-//                 attributes: ["about_user", "specialization"],
-//               },
-//             },
-//           ],
-//           where: {
-//             proj_id: req.params.id,
-//           },
-//           distinct: true,
-//         })
-//           .then((offers) =>
-//             res.status(200).send(getPagingData(offers, page, limit))
-//           )
-//           .catch((error) => {
-//             res.status(400).send({
-//               success: false,
-//               msg: error,
-//             });
-//           });
-//       })
-//       .catch((error) => {
-//         res.status(403).send({
-//           success: false,
-//           msg: error,
-//         });
-//       });
-//   }
-// );
+// Get the Project List of Offers
+router.get(
+  "/project/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "project_offer_get_all")
+      .then((rolePerm) => {
+        // console.log(rolePerm);
+        ProjectOffer.findAndCountAll({
+          limit,
+          offset,
+          // as: "projectoffers",
+          attributes: [
+            "id",
+            "price",
+            "days_to_deliver",
+            "message_desc",
+            "createdAt",
+            getPath(req, "pdf_url"),
+          ],
+          include: [
+            {
+              model: User,
+              as: "client",
+              attributes: [
+                "id",
+                "email",
+                "fullname",
+                "phone",
+                getPath(req, "imgPath"),
+                // [
+                //   Sequelize.fn(
+                //     "concat",
+                //     req.headers.host,
+                //     "/",
+                //     Sequelize.col("projectoffers.client.imgPath")
+                //   ),
+                //   "avatar",
+                // ],
+              ],
+              include: {
+                model: UserProfile,
+                as: "userprofiles",
+                attributes: ["about_user", "specialization"],
+              },
+            },
+          ],
+          where: {
+            proj_id: req.params.id,
+          },
+          distinct: true,
+        })
+          .then((offers) =>
+            res.status(200).send(getPagingData(offers, page, limit))
+          )
+          .catch((error) => {
+            console.log(error);
+            // res.status(400).send({
+            //   success: false,
+            //   msg: error,
+            // });
+          });
+      })
+      .catch((error) => {
+        // console.log(error);
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
 
 // Update a Project
 // router.put(
