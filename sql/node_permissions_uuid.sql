@@ -46,7 +46,9 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 -- INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'project_offer_get_all', 'get Project Offers', now(), now());
 -- INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'owner_project_offer_get_all', 'get owner Project Offers', now(), now());
 
-
+------------------- Conversations-------------------
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'conversation_add', 'save message between sender and reciever', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_conversation_get_all', 'get all message between sender and reciever', now(), now());
 
 --insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'aa8962b9-6d18-11ed-ae9d-ecf4bb83b19b', now(), now());
 

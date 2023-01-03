@@ -59,7 +59,7 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "role_get_all")
       .then((rolePerm) => {
-        console.log(rolePerm);
+        // console.log(rolePerm);
         Role.findAndCountAll({
           limit,
           offset,

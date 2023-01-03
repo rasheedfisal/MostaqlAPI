@@ -10,7 +10,7 @@ const Permission = require("../models").Permission;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
-const Sequelize = require("sequelize");
+const { Op } = require("sequelize");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
@@ -333,6 +333,60 @@ router.delete(
               res.status(400).send(error);
             });
         }
+      })
+      .catch((error) => {
+        res.status(403).send(error);
+      });
+  }
+);
+
+// Get Users For chat
+router.post(
+  "/userschat",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "user_get_all")
+      .then((rolePerm) => {
+        User.findAndCountAll({
+          limit,
+          offset,
+          include: [
+            {
+              model: Role,
+              // include: [
+              //   {
+              //     model: Permission,
+              //     as: "permissions",
+              //   },
+              // ],
+            },
+          ],
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            "phone",
+            getPath(req, "imgPath"),
+            "is_active",
+          ],
+          //group: ["id"],
+          distinct: true,
+          order: [["fullname", "ASC"]],
+          where: {
+            [Op.not]: [{ id: req.user?.id }],
+          },
+        })
+          .then((users) =>
+            res.status(200).send(getPagingData(users, page, limit))
+          ) //
+          .catch((error) => {
+            res.status(400).send(error);
+          });
       })
       .catch((error) => {
         res.status(403).send(error);
