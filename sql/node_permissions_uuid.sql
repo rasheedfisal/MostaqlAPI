@@ -52,11 +52,22 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_conversation_get_all', 'get all message between sender and reciever', now(), now());
 
 
-
-INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'can_access_dashboard', 'checks if the user has access to dashboard', now(), now());
+-------------------Can Access Dasboard-------------------
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'can_access_dashboard', 'allows the user to access the dashboard', now(), now());
 --insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'aa8962b9-6d18-11ed-ae9d-ecf4bb83b19b', now(), now());
 
+--permission
+--f1009a0a-8c11-11ed-836e-0050564873b7
 
+--role
+--f1f4a509-3b95-11ed-8686-ecf4bb83b19b
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee5ac0c-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee773fd-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'beea36a3-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee9c6cb-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'f1009a0a-8c11-11ed-836e-0050564873b7', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee3f4d1-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee5ac0c-3b95-11ed-8686-ecf4bb83b19b', now(), now());
 
 
 

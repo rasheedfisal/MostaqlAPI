@@ -325,49 +325,50 @@ router.post(
             msg: "Please pass permissions.",
           });
         } else {
-          Role.findByPk(req.params.id)
-            .then((role) => {
-              RolePermission.destroy({
-                where: {
-                  role_id: role.id,
-                },
-              })
-                .then((_) => {
-                  req.body.permissions.forEach(function (item, index) {
-                    Permission.findByPk(item)
-                      .then(async (perm) => {
-                        await role.addPermissions(perm, {
-                          through: {
-                            selfGranted: false,
-                          },
-                        });
-                      })
-                      .catch((error) => {
-                        res.status(400).send({
-                          success: false,
-                          msg: error,
-                        });
-                      });
-                  });
-                  res.status(200).send({
-                    msg: "Permissions added",
-                  });
-                })
-                .catch((err) => {
-                  res.status(400).send({
-                    success: false,
-                    msg: err,
-                  });
-                  console.log(err);
-                });
-            })
-            .catch((error) => {
-              res.status(400).send({
-                success: false,
-                msg: error,
-              });
-            });
         }
+
+        Role.findByPk(req.params.id)
+          .then((role) => {
+            RolePermission.destroy({
+              where: {
+                role_id: role.id,
+              },
+            })
+              .then((_) => {
+                req.body.permissions.forEach(function (item, index) {
+                  Permission.findByPk(item)
+                    .then(async (perm) => {
+                      await role.addPermissions(perm, {
+                        through: {
+                          selfGranted: false,
+                        },
+                      });
+                    })
+                    .catch((error) => {
+                      res.status(400).send({
+                        success: false,
+                        msg: error,
+                      });
+                    });
+                });
+                res.status(200).send({
+                  msg: "Permissions added",
+                });
+              })
+              .catch((err) => {
+                res.status(400).send({
+                  success: false,
+                  msg: err,
+                });
+                console.log(err);
+              });
+          })
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
       })
       .catch((error) => {
         res.status(403).send({
