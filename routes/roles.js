@@ -166,24 +166,25 @@ router.get(
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "role_get")
-      .then((rolePerm) => {})
+      .then((rolePerm) => {
+        Role.findByPk(req.params.id, {
+          attributes: [],
+          include: {
+            model: Permission,
+            as: "permissions",
+            attributes: ["id", "perm_name"],
+          },
+        })
+          .then((permissions) => res.status(200).send(permissions))
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
       .catch((error) => {
         res.status(403).send({ msg: error });
-      });
-    Role.findByPk(req.params.id, {
-      attributes: [],
-      include: {
-        model: Permission,
-        as: "permissions",
-        attributes: ["id", "perm_name"],
-      },
-    })
-      .then((permissions) => res.status(200).send(permissions))
-      .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
       });
   }
 );
@@ -325,51 +326,51 @@ router.post(
             msg: "Please pass permissions.",
           });
         } else {
-        }
-
-        Role.findByPk(req.params.id)
-          .then((role) => {
-            RolePermission.destroy({
-              where: {
-                role_id: role.id,
-              },
-            })
-              .then((_) => {
-                req.body.permissions.forEach(function (item, index) {
-                  Permission.findByPk(item)
-                    .then(async (perm) => {
-                      await role.addPermissions(perm, {
-                        through: {
-                          selfGranted: false,
-                        },
-                      });
-                    })
-                    .catch((error) => {
-                      res.status(400).send({
-                        success: false,
-                        msg: error,
-                      });
-                    });
-                });
-                res.status(200).send({
-                  msg: "Permissions added",
-                });
+          Role.findByPk(req.params.id)
+            .then((role) => {
+              RolePermission.destroy({
+                where: {
+                  role_id: role.id,
+                },
               })
-              .catch((err) => {
-                res.status(400).send({
-                  success: false,
-                  msg: err,
+                .then((_) => {
+                  req.body.permissions.forEach(function (item, index) {
+                    Permission.findByPk(item)
+                      .then(async (perm) => {
+                        await role.addPermissions(perm, {
+                          through: {
+                            selfGranted: false,
+                          },
+                        });
+                      })
+                      .catch((error) => {
+                        res.status(400).send({
+                          success: false,
+                          msg: error,
+                        });
+                      });
+                  });
+                  res.status(200).send({
+                    msg: "Permissions added",
+                  });
+                })
+                .catch((err) => {
+                  res.status(400).send({
+                    success: false,
+                    msg: err,
+                  });
+                  console.log(err);
                 });
-                console.log(err);
+            })
+            .catch((error) => {
+              res.status(400).send({
+                success: false,
+                msg: error,
               });
-          })
-          .catch((error) => {
-            res.status(400).send({
-              success: false,
-              msg: error,
             });
-          });
+        }
       })
+
       .catch((error) => {
         res.status(403).send({
           success: false,
