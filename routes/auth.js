@@ -221,6 +221,8 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
         });
       }
 
+      console.log(JSON.stringify(user));
+
       const hasAccessToDashboard = user.Role.permissions.some(
         (el) => el.perm_name === "can_access_dashboard"
       );

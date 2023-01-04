@@ -67,8 +67,9 @@ insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(u
 insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee9c6cb-3b95-11ed-8686-ecf4bb83b19b', now(), now());
 insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'f1009a0a-8c11-11ed-836e-0050564873b7', now(), now());
 insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee3f4d1-3b95-11ed-8686-ecf4bb83b19b', now(), now());
+insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee6da5b-3b95-11ed-8686-ecf4bb83b19b', now(), now());
 
-
+                                                                                        "f1f4a509-3b95-11ed-8686-ecf4bb83b19b"
 
 
 
