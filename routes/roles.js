@@ -7,6 +7,7 @@ const RolePermission = require("../models").RolePermission;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
+
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 
@@ -85,7 +86,7 @@ router.get(
       });
   }
 );
-
+// Get Role fullinfo
 router.get(
   "/fullinfo",
   passport.authenticate("jwt", {
@@ -134,23 +135,24 @@ router.get(
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "role_get")
-      .then((rolePerm) => {})
+      .then((rolePerm) => {
+        Role.findByPk(req.params.id, {
+          include: {
+            model: Permission,
+            as: "permissions",
+            attributes: ["id", "perm_name"],
+          },
+        })
+          .then((roles) => res.status(200).send(roles))
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
       .catch((error) => {
-        res.status(403).send(error);
-      });
-    Role.findByPk(req.params.id, {
-      include: {
-        model: Permission,
-        as: "permissions",
-        attributes: ["id", "perm_name"],
-      },
-    })
-      .then((roles) => res.status(200).send(roles))
-      .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -166,7 +168,7 @@ router.get(
       .checkPermission(req.user.role_id, "role_get")
       .then((rolePerm) => {})
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
     Role.findByPk(req.params.id, {
       attributes: [],
@@ -222,7 +224,7 @@ router.put(
               )
                 .then((_) => {
                   // res.status(200).send({
-                  //   //message: "Role updated",
+                  //   //msg: "Role updated",
                   //   //id: req.params.id,
                   //   //data: {
                   //   id: req.params.id,
@@ -281,13 +283,13 @@ router.delete(
                 })
                   .then((_) => {
                     res.status(200).send({
-                      message: "Role deleted",
+                      msg: "Role deleted",
                     });
                   })
-                  .catch((err) => res.status(400).send(err));
+                  .catch((err) => res.status(400).send({ msg: err }));
               } else {
                 res.status(404).send({
-                  message: "Role not found",
+                  msg: "Role not found",
                 });
               }
             })
@@ -348,7 +350,7 @@ router.post(
                       });
                   });
                   res.status(200).send({
-                    message: "Permissions added",
+                    msg: "Permissions added",
                   });
                 })
                 .catch((err) => {

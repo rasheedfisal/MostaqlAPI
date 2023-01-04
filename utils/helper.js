@@ -22,7 +22,7 @@ class Helper {
               if (rolePermission) {
                 resolve(rolePermission);
               } else {
-                reject({ message: "Forbidden" });
+                reject("Forbidden");
               }
             })
             .catch((error) => {
@@ -30,7 +30,7 @@ class Helper {
             });
         })
         .catch(() => {
-          reject({ message: "Forbidden" });
+          reject("Forbidden");
         });
     });
   }

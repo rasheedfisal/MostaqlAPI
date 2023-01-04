@@ -9,6 +9,8 @@ const loginLimiter = require("../middlewares/loginLimiter");
 const Role = require("../models").Role;
 const Permission = require("../models").Permission;
 const { getPath } = require("../utils/fileUrl");
+const { QueryTypes } = require("sequelize");
+const db = require("../models");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -91,11 +93,11 @@ router.post("/signup", upload.single("profileImage"), function (req, res) {
         })
           .then((user) => res.status(201).send(user))
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(400).send(error);
+        res.status(400).send({ msg: error });
       });
   }
 });
@@ -134,12 +136,12 @@ router.post("/signin", loginLimiter, function (req, res) {
     .then((user) => {
       if (!user) {
         return res.status(401).send({
-          message: "Authentication failed. User not found.",
+          msg: "Authentication failed. User not found.",
         });
       }
       if (!user.is_active) {
         return res.status(401).send({
-          message: "User Account is Locked.",
+          msg: "User Account is Locked.",
         });
       }
 
@@ -179,13 +181,104 @@ router.post("/signin", loginLimiter, function (req, res) {
         }
       });
     })
-    .catch((error) => res.status(400).send(error));
+    .catch((error) => res.status(400).send({ msg: error }));
+});
+router.post("/dashboard_signin", loginLimiter, function (req, res) {
+  User.findOne({
+    attributes: [
+      //[Sequelize.col("user.id"), "uid"],
+      "id",
+      "email",
+      "fullname",
+      "password",
+      "is_active",
+      //"imgPath",
+      getPath(req, "imgPath"),
+    ],
+    include: [
+      {
+        model: Role,
+        attributes: ["role_name"],
+        nested: false,
+        include: {
+          model: Permission,
+          as: "permissions",
+          attributes: ["perm_name"],
+          through: {
+            attributes: [],
+          },
+        },
+      },
+    ],
+    where: {
+      email: req.body.email,
+    },
+  })
+    .then((user) => {
+      if (!user) {
+        return res.status(401).send({
+          msg: "Authentication failed. User not found.",
+        });
+      }
+      if (!user.is_active) {
+        return res.status(401).send({
+          msg: "User Account is Locked.",
+        });
+      }
+
+      const hasAccessToDashboard = user.Role.permissions.some(
+        (el) => el.perm_name === "can_access_dashboard"
+      );
+
+      if (!hasAccessToDashboard) {
+        return res.status(401).send({
+          msg: "Unauthorized",
+        });
+      }
+
+      user.comparePassword(req.body.password, (err, isMatch) => {
+        if (isMatch && !err) {
+          const userDto = convertToUserInfoDto(user);
+          var token = jwt.sign(
+            JSON.parse(JSON.stringify(userDto)),
+            process.env.JWT_SECRET,
+            {
+              expiresIn: "1h", //86400 * 30 in seconds = 30 days
+            }
+          );
+          const refreshToken = jwt.sign(
+            JSON.parse(JSON.stringify(userDto)),
+            process.env.REFRESH_JWT_SECRET,
+            { expiresIn: "1d" }
+          );
+
+          res.cookie("jwt", refreshToken, {
+            httpOnly: true, //accessible only by web server
+            secure: true, //https
+            sameSite: "None", //cross-site cookie
+            maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
+          });
+
+          res.json({
+            success: true,
+            //token: "JWT " + token,
+            token: token,
+          });
+        } else {
+          res.status(401).send({
+            success: false,
+            msg: "Authentication failed. Wrong password.",
+          });
+        }
+      });
+    })
+    .catch((error) => res.status(400).send({ msg: error }));
 });
 
 router.get("/refresh", function (req, res) {
   const cookies = req.cookies;
 
-  if (!cookies?.jwt) return res.status(401).json({ message: "Unauthorized" });
+  if (!cookies?.jwt) return res.status(401).json({ msg: "Unauthorized" });
 
   const refreshToken = cookies.jwt;
 
@@ -193,7 +286,7 @@ router.get("/refresh", function (req, res) {
     refreshToken,
     process.env.REFRESH_JWT_SECRET,
     async (err, decoded) => {
-      if (err) return res.status(403).json({ message: "Forbidden" });
+      if (err) return res.status(403).json({ msg: "Forbidden" });
 
       User.findOne({
         attributes: [
@@ -225,7 +318,7 @@ router.get("/refresh", function (req, res) {
         .then((user) => {
           if (!user) {
             return res.status(401).send({
-              message: "Unauthorized",
+              msg: "Unauthorized",
             });
           }
 
@@ -240,7 +333,7 @@ router.get("/refresh", function (req, res) {
             token: accessToken,
           });
         })
-        .catch((error) => res.status(400).send(error));
+        .catch((error) => res.status(400).send({ msg: error }));
     }
   );
 });
@@ -249,7 +342,28 @@ router.post("/signout", function (req, res) {
   const cookies = req.cookies;
   if (!cookies?.jwt) return res.sendStatus(204); //No content
   res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true });
-  res.json({ message: "Cookie cleared" });
+  res.json({ msg: "Cookie cleared" });
+});
+
+// Get Non Admin Roles
+router.get("/roles", async function (req, res) {
+  try {
+    const roles = await db.sequelize.query(
+      "select * from roles where id not in(select a.id from roles as a " +
+        "inner join rolepermissions as ro on a.id = ro.role_id " +
+        "inner join permissions as p on ro.perm_id = p.id " +
+        "where p.perm_name = 'can_access_dashboard')",
+      {
+        // replacements: { perm_name: "can_access_dashboard" },
+        type: QueryTypes.SELECT,
+        model: Role,
+        mapToModel: true, // pass true here if you have any mapped fields
+      }
+    );
+    res.status(200).send(roles);
+  } catch (error) {
+    res.status(400).send({ msg: error });
+  }
 });
 
 module.exports = router;

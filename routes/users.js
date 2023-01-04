@@ -98,12 +98,12 @@ router.post(
             .then((user) => res.status(201).send(user))
             .catch((error) => {
               console.log(error);
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -144,18 +144,18 @@ router.get(
           ],
           //group: ["id"],
           distinct: true,
-          order: [["fullname", "ASC"]],
+          order: [["createdAt", "DESC"]],
         })
           .then((users) => {
             //res.setHeader("x-total-count", users.count);
             res.status(200).send(getPagingData(users, page, limit));
           })
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -175,6 +175,7 @@ router.get(
             "id",
             "email",
             "fullname",
+            "phone",
             getPath(req, "imgPath"),
             "is_active",
           ],
@@ -185,11 +186,11 @@ router.get(
         })
           .then((user) => res.status(200).send(user))
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -230,11 +231,11 @@ router.post(
         })
           .then((user) => res.status(200).send(convertToUserInfoDto(user))) //
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -278,18 +279,18 @@ router.put(
               )
                 .then((_) => {
                   res.status(200).send({
-                    message: "User updated",
+                    msg: "User updated",
                   });
                 })
-                .catch((err) => res.status(400).send(err));
+                .catch((err) => res.status(400).send({ msg: err }));
             })
             .catch((error) => {
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -302,7 +303,7 @@ router.delete(
   }),
   function (req, res) {
     helper
-      .checkPermission(req.user.role_id, "role_delete")
+      .checkPermission(req.user.role_id, "user_delete")
       .then((rolePerm) => {
         if (!req.params.id) {
           res.status(400).send({
@@ -319,23 +320,74 @@ router.delete(
                 })
                   .then((_) => {
                     res.status(200).send({
-                      message: "User deleted",
+                      msg: "User deleted",
                     });
                   })
-                  .catch((err) => res.status(400).send(err));
+                  .catch((err) => res.status(400).send({ msg: err }));
               } else {
                 res.status(404).send({
-                  message: "User not found",
+                  msg: "User not found",
                 });
               }
             })
             .catch((error) => {
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Lock and unlock user
+router.put(
+  "/lockunlock/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_lock_unlock")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass user ID.",
+          });
+        } else {
+          User.findByPk(req.params.id)
+            .then((user) => {
+              if (user) {
+                User.update(
+                  {
+                    is_active: !user.is_active,
+                  },
+                  {
+                    where: {
+                      id: req.params.id,
+                    },
+                  }
+                )
+                  .then((_) => {
+                    res.status(200).send({
+                      msg: "User status changed",
+                    });
+                  })
+                  .catch((err) => res.status(400).send({ msg: err }));
+              } else {
+                res.status(404).send({
+                  msg: "User not found",
+                });
+              }
+            })
+            .catch((error) => {
+              res.status(400).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -385,11 +437,11 @@ router.post(
             res.status(200).send(getPagingData(users, page, limit))
           ) //
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );

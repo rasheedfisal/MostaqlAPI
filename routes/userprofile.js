@@ -63,7 +63,7 @@ router.post(
               )
                 .then((_) => {
                   res.status(200).send({
-                    message: "Resourse updated",
+                    msg: "Resourse updated",
                   });
                 })
                 .catch((err) =>
@@ -73,7 +73,7 @@ router.post(
                   })
                 );
             })
-            .catch((error) => res.status(400).send(error));
+            .catch((error) => res.status(400).send({ msg: error }));
         }
       })
       .catch((error) => {
@@ -139,7 +139,7 @@ router.get(
       .checkPermission(req.user.role_id, "profile_get")
       .then((rolePerm) => {})
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
     UserProfile.findOne({
       where: {
@@ -200,7 +200,7 @@ router.put(
               )
                 .then((_) => {
                   res.status(200).send({
-                    message: "Resourse updated",
+                    msg: "Resourse updated",
                   });
                 })
                 .catch((err) =>
@@ -256,13 +256,13 @@ router.put(
 //                 })
 //                   .then((_) => {
 //                     res.status(200).send({
-//                       message: "Resourse deleted",
+//                       msg: "Resourse deleted",
 //                     });
 //                   })
-//                   .catch((err) => res.status(400).send(err));
+//                   .catch((err) => res.status(400).send({msg: err}));
 //               } else {
 //                 res.status(404).send({
-//                   message: "Resourse not found",
+//                   msg: "Resourse not found",
 //                 });
 //               }
 //             })

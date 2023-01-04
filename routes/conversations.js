@@ -30,12 +30,12 @@ router.post(
             .then((conversations) => res.status(201).send(conversations))
             .catch((error) => {
               console.log(error);
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -89,11 +89,11 @@ router.post(
           )
           .catch((error) => {
             console.log(error);
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );

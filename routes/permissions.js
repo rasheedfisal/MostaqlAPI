@@ -29,12 +29,12 @@ router.post(
             .then((perm) => res.status(201).send(perm))
             .catch((error) => {
               console.log(error);
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -57,11 +57,11 @@ router.get(
             res.status(200).send(perms);
           })
           .catch((error) => {
-            res.status(400).send(error);
+            res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -101,18 +101,18 @@ router.put(
               )
                 .then((_) => {
                   res.status(200).send({
-                    message: "permission updated",
+                    msg: "permission updated",
                   });
                 })
-                .catch((err) => res.status(400).send(err));
+                .catch((err) => res.status(400).send({ msg: err }));
             })
             .catch((error) => {
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
@@ -143,23 +143,23 @@ router.delete(
                   })
                   .then((_) => {
                     res.status(200).send({
-                      message: "permission deleted",
+                      msg: "permission deleted",
                     });
                   })
-                  .catch((err) => res.status(400).send(err));
+                  .catch((err) => res.status(400).send({ msg: err }));
               } else {
                 res.status(404).send({
-                  message: "permission not found",
+                  msg: "permission not found",
                 });
               }
             })
             .catch((error) => {
-              res.status(400).send(error);
+              res.status(400).send({ msg: error });
             });
         }
       })
       .catch((error) => {
-        res.status(403).send(error);
+        res.status(403).send({ msg: error });
       });
   }
 );
