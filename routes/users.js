@@ -450,7 +450,7 @@ router.post(
 );
 
 // Get List of Enginners
-router.get(
+router.post(
   "/enginners",
   passport.authenticate("jwt", {
     session: false,
@@ -458,6 +458,28 @@ router.get(
   function (req, res) {
     const { page, size } = req.query;
     const { limit, offset } = getPagination(page, size);
+
+    // try {
+    //   await helper.checkPermission(req.user.role_id, "user_get_enginners");
+
+    //   const result = await db.sequelize.query(
+    //     "select * from users where role_id in(select a.id from roles as a " +
+    //       "inner join rolepermissions as ro on a.id = ro.role_id " +
+    //       "inner join permissions as p on ro.perm_id = p.id " +
+    //       "where p.perm_name = 'is_enginner') LIMIT 0,10",
+    //     {
+    //       // replacements: { offset, limit },
+    //       type: QueryTypes.SELECT,
+    //       // model: User,
+    //       // mapToModel: true, // pass true here if you have any mapped fields
+    //     }
+    //   );
+    //   console.log("users", result);
+    //   res.status(200).send(result);
+    // } catch (error) {
+    //   res.status(403).send({ msg: error });
+    // }
+
     helper
       .checkPermission(req.user.role_id, "user_get_enginners")
       .then((rolePerm) => {
@@ -475,8 +497,8 @@ router.get(
             }
           )
           .then((users) => {
-            //res.setHeader("x-total-count", users.count);
-            res.status(200).send(getPagingData(users, page, limit));
+            const usersCount = { count: users.length, rows: users };
+            res.status(200).send(getPagingData(usersCount, page, limit));
           })
           .catch((error) => {
             res.status(400).send({ msg: error });
