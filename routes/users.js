@@ -147,7 +147,7 @@ router.get(
           ],
           //group: ["id"],
           // distinct: true,
-          order: [[User, "createdAt", "DESC"]],
+          order: [["createdAt", "desc"]],
         })
           .then((users) => {
             //res.setHeader("x-total-count", users.count);
