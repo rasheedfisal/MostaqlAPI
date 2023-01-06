@@ -196,7 +196,6 @@ router.put(
     session: false,
   }),
   function (req, res) {
-    console.log(req);
     helper
       .checkPermission(req.user.role_id, "role_update")
       .then((rolePerm) => {

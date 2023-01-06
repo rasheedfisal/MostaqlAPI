@@ -17,3 +17,17 @@ insert into priceranges (id, range_name, range_from, range_to, createdAt, update
 insert into priceranges (id, range_name, range_from, range_to, createdAt, updatedAt) values (uuid(), '5000 - 10000', 5000, 10000, now(), now());
 
 
+DROP TABLE IF EXISTS `conversations`;
+DROP TABLE IF EXISTS `products`;
+DROP TABLE IF EXISTS `projectoffers`;
+DROP TABLE IF EXISTS `projects`;
+DROP TABLE IF EXISTS `projstatuses`;
+DROP TABLE IF EXISTS `userprofiles`;
+DROP TABLE IF EXISTS `categories`;
+DROP TABLE IF EXISTS `priceranges`;
+DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `roles`;
+DROP TABLE IF EXISTS `permissions`;
+DROP TABLE IF EXISTS `rolepermissions`;
+DROP TABLE IF EXISTS `sequelizemeta`;
+
