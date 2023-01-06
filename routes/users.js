@@ -14,6 +14,8 @@ const { Op } = require("sequelize");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
+const { QueryTypes } = require("sequelize");
+const db = require("../models");
 
 const mergeUserPermissions = (permissions) => {
   let mergedPermission = [];
@@ -437,6 +439,45 @@ router.post(
           .then((users) =>
             res.status(200).send(getPagingData(users, page, limit))
           ) //
+          .catch((error) => {
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Get List of Enginners
+router.get(
+  "/enginners",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "user_get_enginners")
+      .then((rolePerm) => {
+        db.sequelize
+          .query(
+            "select * from users where role_id in(select a.id from roles as a " +
+              "inner join rolepermissions as ro on a.id = ro.role_id " +
+              "inner join permissions as p on ro.perm_id = p.id " +
+              "where p.perm_name = 'is_enginner') LIMIT :offset,:limit",
+            {
+              replacements: { offset, limit },
+              type: QueryTypes.SELECT,
+              model: User,
+              mapToModel: true, // pass true here if you have any mapped fields
+            }
+          )
+          .then((users) => {
+            //res.setHeader("x-total-count", users.count);
+            res.status(200).send(getPagingData(users, page, limit));
+          })
           .catch((error) => {
             res.status(400).send({ msg: error });
           });
