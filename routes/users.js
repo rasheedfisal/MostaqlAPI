@@ -146,7 +146,7 @@ router.get(
             "createdAt",
           ],
           //group: ["id"],
-          // distinct: true,
+          distinct: true,
           order: [["createdAt", "desc"]],
         })
           .then((users) => {
