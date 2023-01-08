@@ -53,7 +53,15 @@ const imageFilter = (req, file, cb) => {
   if (
     file.mimetype === "image/jpeg" ||
     file.mimetype === "image/png" ||
-    file.mimetype === "image/jpg"
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "application/msword" ||
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    file.mimetype === "text/plain" ||
+    file.mimetype === "application/vnd.ms-excel" ||
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.mimetype === "application/pdf"
   ) {
     cb(null, true);
   } else {
@@ -69,33 +77,72 @@ const upload = multer({
   },
 });
 
-router.post("/signup", upload.single("profileImage"), function (req, res) {
-  if (
-    !req.body.role_id ||
-    !req.body.email ||
-    !req.body.password ||
-    !req.body.fullname ||
-    !req.body.phone
-  ) {
-    res.status(400).send({
-      msg: "Please pass Role ID, email, password, phone or fullname.",
-    });
-  } else {
-    User.create({
-      email: req.body.email,
-      password: req.body.password,
-      fullname: req.body.fullname,
-      phone: req.body.phone,
-      imgPath: req.file?.path,
-      role_id: req.body.role_id,
-    })
-      .then((user) => res.status(201).send(user))
-      .catch((error) => {
-        console.log(error);
-        res.status(400).send({ msg: error });
+router.post(
+  "/signup",
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "Credentials", maxCount: 1 },
+  ]),
+  function (req, res) {
+    if (
+      !req.body.role_id ||
+      !req.body.email ||
+      !req.body.password ||
+      !req.body.fullname ||
+      !req.body.phone
+    ) {
+      res.status(400).send({
+        msg: "Please pass Role ID, email, password, phone or fullname.",
       });
+    } else {
+      res.status(201).send(req.files);
+      // User.create({
+      //   email: req.body.email,
+      //   password: req.body.password,
+      //   fullname: req.body.fullname,
+      //   phone: req.body.phone,
+      //   imgPath: req.files.path,
+      //   role_id: req.body.role_id,
+      // })
+      //   .then((user) => res.status(201).send(user))
+      //   .catch((error) => {
+      //     console.log(error);
+      //     res.status(400).send({ msg: error });
+      //   });
+    }
   }
-});
+);
+router.post(
+  "/dashboard_signup",
+  upload.single("profileImage"),
+  function (req, res) {
+    if (
+      !req.body.role_id ||
+      !req.body.email ||
+      !req.body.password ||
+      !req.body.fullname ||
+      !req.body.phone
+    ) {
+      res.status(400).send({
+        msg: "Please pass Role ID, email, password, phone or fullname.",
+      });
+    } else {
+      User.create({
+        email: req.body.email,
+        password: req.body.password,
+        fullname: req.body.fullname,
+        phone: req.body.phone,
+        imgPath: req.file?.path,
+        role_id: req.body.role_id,
+      })
+        .then((user) => res.status(201).send(user))
+        .catch((error) => {
+          console.log(error);
+          res.status(400).send({ msg: error });
+        });
+    }
+  }
+);
 
 router.post("/signin", loginLimiter, function (req, res) {
   User.findOne({

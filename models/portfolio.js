@@ -1,15 +1,20 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class Category extends Model {
+  class Portfolio extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
-    static associate(models) {}
+    static associate(models) {
+      // define association here
+      Portfolio.belongsTo(models.User, {
+        foreignKey: "user_id",
+      });
+    }
   }
-  Category.init(
+  Portfolio.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -17,21 +22,29 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      cat_name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      cat_img: DataTypes.STRING,
-      cat_description: {
-        type: DataTypes.STRING,
+      user_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      imgpath: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      url_link: DataTypes.STRING,
     },
     {
       sequelize,
-      modelName: "Category",
+      modelName: "Portfolio",
     }
   );
-  return Category;
+  return Portfolio;
 };

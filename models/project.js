@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       Project.belongsTo(models.ProjStatus, {
         foreignKey: "proj_status_id",
       });
-      Project.belongsTo(models.Category, {
+      Project.belongsTo(models.SubCategories, {
         foreignKey: "category_id",
       });
     }

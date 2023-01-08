@@ -1,15 +1,21 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class Category extends Model {
+  class SubCategories extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
-    static associate(models) {}
+    static associate(models) {
+      // define association here
+      SubCategories.hasMany(models.Project, {
+        foreignKey: "category_id",
+        as: "projects",
+      });
+    }
   }
-  Category.init(
+  SubCategories.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -17,21 +23,20 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      cat_name: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
       },
-      cat_img: DataTypes.STRING,
-      cat_description: {
-        type: DataTypes.STRING,
+      cat_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: "Category",
+      modelName: "SubCategories",
     }
   );
-  return Category;
+  return SubCategories;
 };
