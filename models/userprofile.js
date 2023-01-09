@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       UserProfile.belongsTo(models.User, {
         foreignKey: "user_id",
+        as: "profileOwner",
       });
     }
   }

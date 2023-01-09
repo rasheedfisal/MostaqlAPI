@@ -7,4 +7,10 @@ module.exports = {
       filename,
     ];
   },
+  getNestedPath: (req, filename, col_name) => {
+    return [
+      Sequelize.fn("concat", req.headers.host, "/", Sequelize.col(filename)),
+      col_name,
+    ];
+  },
 };

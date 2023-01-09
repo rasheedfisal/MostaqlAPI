@@ -5,9 +5,10 @@ const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
-const { getPath } = require("../utils/fileUrl");
+const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const multer = require("multer");
+const Sequelize = require("sequelize");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -78,7 +79,6 @@ router.post(
                     });
                   });
               }
-
               UserProfile.update(
                 {
                   about_user: req.body.about_user || profile.about_user,
@@ -172,34 +172,35 @@ router.get(
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "profile_get")
-      .then((rolePerm) => {})
+      .then((rolePerm) => {
+        UserProfile.findOne({
+          where: {
+            user_id: req.params.id,
+          },
+          attributes: ["about_user", "specialization"],
+          include: [
+            {
+              model: User,
+              attributes: [
+                "id",
+                "email",
+                "fullname",
+                "phone",
+                getPath(req, "imgPath"),
+              ],
+            },
+          ],
+        })
+          .then((profile) => res.status(200).send(profile))
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
       .catch((error) => {
         res.status(403).send({ msg: error });
-      });
-    UserProfile.findOne({
-      where: {
-        user_id: req.params.id,
-      },
-      attributes: ["about_user", "specialization"],
-      include: [
-        {
-          model: User,
-          attributes: [
-            "id",
-            "email",
-            "fullname",
-            "phone",
-            getPath(req, "imgPath"),
-          ],
-        },
-      ],
-    })
-      .then((profile) => res.status(200).send(profile))
-      .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
       });
   }
 );
@@ -213,43 +214,59 @@ router.get(
   function (req, res) {
     helper
       .checkPermission(req.user.role_id, "profile_get")
-      .then((rolePerm) => {})
-      .catch((error) => {
-        res.status(403).send({ msg: error });
-      });
-    UserProfile.findOne({
-      where: {
-        user_id: req.user?.id,
-      },
-      attributes: ["about_user", "specialization"],
-      include: [
-        {
-          model: User,
-          attributes: [
-            "id",
-            "email",
-            "fullname",
-            "phone",
-            getPath(req, "imgPath"),
-          ],
+      .then((rolePerm) => {
+        UserProfile.findOne({
+          where: {
+            user_id: req.user?.id,
+          },
+          attributes: ["about_user", "specialization"],
           include: [
             {
-              model: UserSkills,
-              attributes: ["skill_name"],
-            },
-            {
-              model: Portfolio,
+              model: User,
+              as: "profileOwner",
+              attributes: [
+                "id",
+                "email",
+                "fullname",
+                "phone",
+                getNestedPath(req, "profileOwner.imgPath", "imgpath"),
+              ],
+              include: [
+                {
+                  model: UserSkills,
+                  as: "userskills",
+                  attributes: ["skill_name"],
+                },
+                {
+                  model: Portfolio,
+                  as: "userportfolio",
+                  attributes: [
+                    "title",
+                    "description",
+                    getNestedPath(
+                      req,
+                      "profileOwner.userportfolio.imgPath",
+                      "imgpath"
+                    ),
+                    "url_link",
+                    "createdAt",
+                  ],
+                },
+              ],
             },
           ],
-        },
-      ],
-    })
-      .then((profile) => res.status(200).send(profile))
+        })
+          .then((profile) => res.status(200).send(profile))
+          .catch((error) => {
+            console.log(error);
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
       .catch((error) => {
-        res.status(400).send({
-          success: false,
-          msg: error,
-        });
+        res.status(403).send({ msg: error });
       });
   }
 );
