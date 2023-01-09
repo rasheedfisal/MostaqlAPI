@@ -10,6 +10,7 @@ const {
   ProjectOffer,
   UserProfile,
   SubCategories,
+  UserCredentials,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -83,33 +84,43 @@ router.post(
             msg: "Wrong file Extension.",
           });
         } else {
-          ProjStatus.findOne({
-            where: {
-              stat_name: "Open",
-            },
-          })
-            .then((status) => {
-              Project.create({
-                user_added_id: req.user?.id,
-                proj_title: req.body.proj_title,
-                proj_description: req.body.proj_description,
-                category_id: req.body.category_id,
-                price_range_id: req.body.price_range_id,
-                proj_period: req.body.proj_period,
-                attatchment_file: req.file?.path,
-                proj_status_id: status.id,
-              })
-                .then((profile) => res.status(201).send(profile))
-                .catch((error) => {
-                  res.status(400).send({
-                    success: false,
-                    msg: error,
+          UserCredentials.findOne({ where: { user_id: req.user?.id } })
+            .then((credential) => {
+              if (credential?.is_authorized) {
+                ProjStatus.findOne({
+                  where: {
+                    stat_name: "Open",
+                  },
+                })
+                  .then((status) => {
+                    Project.create({
+                      user_added_id: req.user?.id,
+                      proj_title: req.body.proj_title,
+                      proj_description: req.body.proj_description,
+                      category_id: req.body.category_id,
+                      price_range_id: req.body.price_range_id,
+                      proj_period: req.body.proj_period,
+                      attatchment_file: req.file?.path,
+                      proj_status_id: status.id,
+                    })
+                      .then((profile) => res.status(201).send(profile))
+                      .catch((error) => {
+                        res.status(400).send({
+                          success: false,
+                          msg: error,
+                        });
+                      });
+                  })
+                  .catch((error) => {
+                    res.status(400).send({ msg: error });
                   });
+              } else {
+                res.status(401).send({
+                  msg: "user credentials are not verified",
                 });
+              }
             })
-            .catch((error) => {
-              res.status(400).send({ msg: error });
-            });
+            .catch((err) => res.status(500).send({ msg: err }));
         }
       })
       .catch((error) => {

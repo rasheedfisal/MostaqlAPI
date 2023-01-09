@@ -6,6 +6,7 @@ const {
   UserProfile,
   ProjectOffer,
   UserCredentials,
+  Project,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -74,23 +75,37 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          UserCredentials.findOne({ where: { user_id: req.user.id } })
+          UserCredentials.findOne({ where: { user_id: req.user?.id } })
             .then((credential) => {
-              if (credential.is_authorized) {
-                ProjectOffer.create({
-                  proj_id: req.body.proj_id,
-                  user_offered_id: req.user.id,
-                  price: req.body.price,
-                  days_to_deliver: req.body.days_to_deliver,
-                  message_desc: req.body.message_desc,
-                  pdf_url: req.file?.path,
-                })
-                  .then((offer) => res.status(201).send(offer))
-                  .catch((error) => {
-                    res.status(500).send({
-                      success: false,
-                      msg: error,
-                    });
+              if (credential?.is_authorized) {
+                Project.findOne({ where: { id: req.body.proj_id } })
+                  .then((proj) => {
+                    if (!proj)
+                      return res.status(404).send({ msg: "Project Not Found" });
+
+                    if (proj.user_added_id === req.user?.id)
+                      return res
+                        .status(400)
+                        .send({ msg: "User Cannot add offer to his project!" });
+
+                    ProjectOffer.create({
+                      proj_id: req.body.proj_id,
+                      user_offered_id: req.user.id,
+                      price: req.body.price,
+                      days_to_deliver: req.body.days_to_deliver,
+                      message_desc: req.body.message_desc,
+                      pdf_url: req.file?.path,
+                    })
+                      .then((offer) => res.status(201).send(offer))
+                      .catch((error) => {
+                        res.status(500).send({
+                          success: false,
+                          msg: error,
+                        });
+                      });
+                  })
+                  .catch((err) => {
+                    res.status(500).send({ msg: err });
                   });
               } else {
                 res.status(401).send({
@@ -98,7 +113,10 @@ router.post(
                 });
               }
             })
-            .catch((error) => res.status(500).send({ msg: error }));
+            .catch((error) => {
+              console.log(error);
+              res.status(500).send({ msg: error });
+            });
         }
       })
       .catch((error) => {

@@ -1,12 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models").User;
-const Role = require("../models").Role;
-const Project = require("../models").Project;
-const Profile = require("../models").Profile;
-const PriceRange = require("../models").PriceRange;
+const { User, Role, Permission, UserCredentials } = require("../models");
 const multer = require("multer");
-const Permission = require("../models").Permission;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
@@ -377,7 +372,7 @@ router.put(
                       msg: "User status changed",
                     });
                   })
-                  .catch((err) => res.status(400).send({ msg: err }));
+                  .catch((err) => res.status(500).send({ msg: err }));
               } else {
                 res.status(404).send({
                   msg: "User not found",
@@ -385,7 +380,7 @@ router.put(
               }
             })
             .catch((error) => {
-              res.status(400).send({ msg: error });
+              res.status(500).send({ msg: error });
             });
         }
       })
@@ -458,28 +453,6 @@ router.post(
   function (req, res) {
     const { page, size } = req.query;
     const { limit, offset } = getPagination(page, size);
-
-    // try {
-    //   await helper.checkPermission(req.user.role_id, "user_get_enginners");
-
-    //   const result = await db.sequelize.query(
-    //     "select * from users where role_id in(select a.id from roles as a " +
-    //       "inner join rolepermissions as ro on a.id = ro.role_id " +
-    //       "inner join permissions as p on ro.perm_id = p.id " +
-    //       "where p.perm_name = 'is_enginner') LIMIT 0,10",
-    //     {
-    //       // replacements: { offset, limit },
-    //       type: QueryTypes.SELECT,
-    //       // model: User,
-    //       // mapToModel: true, // pass true here if you have any mapped fields
-    //     }
-    //   );
-    //   console.log("users", result);
-    //   res.status(200).send(result);
-    // } catch (error) {
-    //   res.status(403).send({ msg: error });
-    // }
-
     helper
       .checkPermission(req.user.role_id, "user_get_enginners")
       .then((rolePerm) => {
@@ -503,6 +476,64 @@ router.post(
           .catch((error) => {
             res.status(400).send({ msg: error });
           });
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// update or create user Credentails
+router.put(
+  "/credentials/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_authorize")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass user ID.",
+          });
+        } else {
+          UserCredentials.findOrCreate({
+            where: { user_id: req.params?.id },
+            defaults: {
+              user_id: req.params?.id,
+              is_authorized: false,
+            },
+          })
+            .then(([credentials, created]) => {
+              if (!credentials)
+                return res.status(404).send({ msg: "User Not Found" });
+
+              // console.log(credentials.is_authorized);
+              // console.log(created);
+              UserCredentials.update(
+                {
+                  is_authorized: !credentials.is_authorized,
+                },
+                {
+                  where: {
+                    user_id: credentials.user_id,
+                  },
+                }
+              )
+                .then((_) => {
+                  res.status(200).send({
+                    msg: "Credential status changed",
+                  });
+                })
+                .catch((err) => res.status(500).send({ msg: err }));
+            })
+            .catch((error) =>
+              res.status(500).send({
+                msg: error,
+              })
+            );
+        }
       })
       .catch((error) => {
         res.status(403).send({ msg: error });
