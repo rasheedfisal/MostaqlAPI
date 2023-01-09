@@ -204,6 +204,56 @@ router.get(
   }
 );
 
+// Get User Profile
+router.get(
+  "/user",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "profile_get")
+      .then((rolePerm) => {})
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+    UserProfile.findOne({
+      where: {
+        user_id: req.user?.id,
+      },
+      attributes: ["about_user", "specialization"],
+      include: [
+        {
+          model: User,
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            "phone",
+            getPath(req, "imgPath"),
+          ],
+          include: [
+            {
+              model: UserSkills,
+              attributes: ["skill_name"],
+            },
+            {
+              model: Portfolio,
+            },
+          ],
+        },
+      ],
+    })
+      .then((profile) => res.status(200).send(profile))
+      .catch((error) => {
+        res.status(400).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
 // Update a UserProfile
 router.put(
   "/update",
@@ -321,7 +371,7 @@ router.put(
 //////////////////////////// skills /////////////////////////////////
 // add skill
 router.post(
-  "/skill/:pid",
+  "/skill",
   passport.authenticate("jwt", {
     session: false,
   }),
@@ -334,18 +384,11 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          UserProfile.findOne({ where: { profile_id: req.params?.pid } })
-            .then((profile) => {
-              if (!profile)
-                return res.status(404).send({ msg: "Profile Not Found" });
-
-              UserSkills.create({
-                profile_id: req.params?.pid,
-                skill_name: req.body.skillname,
-              })
-                .then((skill) => res.status(201).send(skill))
-                .catch((err) => res.status(500).send({ msg: err }));
-            })
+          UserSkills.create({
+            user_id: req.user?.id,
+            skill_name: req.body.skillname,
+          })
+            .then((skill) => res.status(201).send(skill))
             .catch((err) => res.status(500).send({ msg: err }));
         }
       })
@@ -360,7 +403,7 @@ router.post(
 
 // Get List of Profile Skills
 router.get(
-  "/skill/:pid",
+  "/skill",
   passport.authenticate("jwt", {
     session: false,
   }),
@@ -372,7 +415,7 @@ router.get(
           {
             attributes: ["id", "skill_name"],
           },
-          { where: { porfile_id: req.params.pid } }
+          { where: { user_id: req.user?.id } }
         )
           .then((profile) => res.status(200).send(profile))
           .catch((error) => {
@@ -440,7 +483,7 @@ router.put(
               if (!skills)
                 return res.status(404).send({ msg: "Skill Not Found" });
 
-              UserProfile.update(
+              UserSkills.update(
                 {
                   skill_name: req.body.skillname || skills.skill_name,
                 },

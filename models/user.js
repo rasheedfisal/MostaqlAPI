@@ -41,6 +41,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "usercredentials",
       });
+      User.hasMany(models.UserSkills, {
+        foreignKey: "user_id",
+        as: "userskills",
+      });
       //User.hasOne(models.Role);
     }
   }

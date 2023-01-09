@@ -11,10 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       UserProfile.belongsTo(models.User, {
         foreignKey: "user_id",
       });
-      UserProfile.hasMany(models.UserSkills, {
-        foreignKey: "profile_id",
-        as: "userskills",
-      });
     }
   }
   UserProfile.init(
