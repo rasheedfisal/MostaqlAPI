@@ -1,13 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const User = require("../models").User;
-const Project = require("../models").Project;
-const ProjStatus = require("../models").ProjStatus;
-const Category = require("../models").Category;
-const PriceRange = require("../models").PriceRange;
-const ProjectOffer = require("../models").ProjectOffer;
-const UserProfile = require("../models").UserProfile;
+const {
+  User,
+  Project,
+  ProjStatus,
+  Category,
+  PriceRange,
+  ProjectOffer,
+  UserProfile,
+  SubCategories,
+} = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
@@ -41,7 +44,8 @@ const imageFilter = (req, file, cb) => {
   ) {
     cb(null, true);
   } else {
-    cb(null, false);
+    req.fileValidationError = "Forbidden extension";
+    cb(null, false, req.fileValidationError);
   }
 };
 
@@ -73,6 +77,10 @@ router.post(
         ) {
           res.status(400).send({
             msg: "missing fields please add required info.",
+          });
+        } else if (req.fileValidationError) {
+          res.status(400).send({
+            msg: "Wrong file Extension.",
           });
         } else {
           ProjStatus.findOne({
@@ -161,8 +169,12 @@ router.get(
               ],
             },
             {
-              model: Category,
-              attributes: ["cat_name", getPath(req, "cat_img")],
+              model: SubCategories,
+              attributes: ["name"],
+              include: {
+                model: Category,
+                attributes: ["cat_name", getPath(req, "cat_img")],
+              },
             },
             {
               model: PriceRange,
@@ -174,6 +186,94 @@ router.get(
             },
           ],
           distinct: true,
+        })
+          .then((projects) =>
+            res.status(200).send(getPagingData(projects, page, limit))
+          )
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get List of Projects by Sub Category
+router.get(
+  "/",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size, scatid } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "project_get_all")
+      .then((rolePerm) => {
+        //console.log(rolePerm);
+        Project.findAndCountAll({
+          limit,
+          offset,
+          attributes: [
+            "id",
+            "proj_title",
+            "proj_description",
+            "proj_period",
+            "CreatedAt",
+            getPath(req, "attatchment_file"),
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
+              ),
+              "OffersCount",
+            ],
+          ],
+          include: [
+            {
+              model: User,
+              as: "owner",
+              attributes: [
+                "fullname",
+                [
+                  Sequelize.fn(
+                    "concat",
+                    req.headers.host,
+                    "/",
+                    Sequelize.col("owner.imgPath")
+                  ),
+                  "avatar",
+                ],
+              ],
+            },
+            {
+              model: SubCategories,
+              attributes: ["name"],
+              include: {
+                model: Category,
+                attributes: ["cat_name", getPath(req, "cat_img")],
+              },
+            },
+            {
+              model: PriceRange,
+              attributes: ["range_name"],
+            },
+            {
+              model: ProjStatus,
+              attributes: ["stat_name"],
+            },
+          ],
+          distinct: true,
+          where: {
+            category_id: scatid,
+          },
         })
           .then((projects) =>
             res.status(200).send(getPagingData(projects, page, limit))
@@ -422,8 +522,12 @@ router.get(
           ],
           include: [
             {
-              model: Category,
-              attributes: ["cat_name", getPath(req, "cat_img")],
+              model: SubCategories,
+              attributes: ["name"],
+              include: {
+                model: Category,
+                attributes: ["cat_name", getPath(req, "cat_img")],
+              },
             },
             {
               model: PriceRange,
@@ -513,8 +617,12 @@ router.get(
               //attributes: ["fullname"],
             },
             {
-              model: Category,
-              attributes: ["cat_name", getPath(req, "cat_img")],
+              model: SubCategories,
+              attributes: ["name"],
+              include: {
+                model: Category,
+                attributes: ["cat_name", getPath(req, "cat_img")],
+              },
             },
             {
               model: PriceRange,

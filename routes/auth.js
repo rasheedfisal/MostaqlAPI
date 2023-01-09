@@ -4,13 +4,20 @@ const passport = require("passport");
 const multer = require("multer");
 const router = express.Router();
 require("../config/passport")(passport);
-const User = require("../models").User;
+// const User  = require("../models").User;
 const loginLimiter = require("../middlewares/loginLimiter");
-const Role = require("../models").Role;
-const Permission = require("../models").Permission;
+// const Role = require("../models").Role;
+// const Permission = require("../models").Permission;
+// const UserCredentials = require("../models");
 const { getPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
-const db = require("../models");
+const {
+  User,
+  Role,
+  Permission,
+  UserCredentials,
+  sequelize,
+} = require("../models");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -83,7 +90,7 @@ router.post(
     { name: "profileImage", maxCount: 1 },
     { name: "Credentials", maxCount: 1 },
   ]),
-  function (req, res) {
+  async function (req, res) {
     if (
       !req.body.role_id ||
       !req.body.email ||
@@ -95,7 +102,34 @@ router.post(
         msg: "Please pass Role ID, email, password, phone or fullname.",
       });
     } else {
-      res.status(201).send(req.files);
+      try {
+        await sequelize.transaction(async function (transaction) {
+          const user = await User.create(
+            {
+              email: req.body.email,
+              password: req.body.password,
+              fullname: req.body.fullname,
+              phone: req.body.phone,
+              imgPath: req.files.profileImage[0]?.path,
+              role_id: req.body.role_id,
+            },
+            { transaction }
+          );
+
+          await UserCredentials.create(
+            {
+              user_id: user.id,
+              attachments: req.files.Credentials[0]?.path,
+            },
+            { transaction }
+          );
+
+          res.status(201).send(user);
+        });
+      } catch (error) {
+        res.status(400).send({ msg: error });
+      }
+
       // User.create({
       //   email: req.body.email,
       //   password: req.body.password,
@@ -392,7 +426,7 @@ router.post("/signout", function (req, res) {
 // Get Non Admin Roles
 router.get("/roles", async function (req, res) {
   try {
-    const roles = await db.sequelize.query(
+    const roles = await sequelize.query(
       "select * from roles where id not in(select a.id from roles as a " +
         "inner join rolepermissions as ro on a.id = ro.role_id " +
         "inner join permissions as p on ro.perm_id = p.id " +

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Category = require("../models").Category;
+const { Category, SubCategories } = require("../models");
 const passport = require("passport");
 const multer = require("multer");
 require("../config/passport")(passport);
@@ -211,4 +211,175 @@ router.delete(
   }
 );
 
+///////////////////////////////// sub categories ///////////////////////////////////
+// Create a new Sub Category
+router.post(
+  "/subcat/:catid",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "category_add")
+      .then((rolePerm) => {
+        if (!req.body.name || !req.params.catid) {
+          res.status(400).send({
+            msg: "missing fields please add required info.",
+          });
+        } else {
+          SubCategories.create({
+            name: req.body.name,
+            cat_id: req.params.catid,
+          })
+            .then((category) => res.status(201).send(category))
+            .catch((error) => {
+              res.status(400).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Get Sub Categories by Category ID
+router.get(
+  "/subcat/:catid",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "category_get")
+      .then((rolePerm) => {
+        SubCategories.findAll({
+          where: {
+            cat_id: req.params.catid,
+          },
+        })
+          .then((category) => res.status(200).send(category))
+          .catch((error) => {
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Get Sub Category by ID
+router.get(
+  "/subcat/get/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "category_get")
+      .then((rolePerm) => {
+        SubCategories.findByPk(req.params.id)
+          .then((category) => res.status(200).send(category))
+          .catch((error) => {
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Update a Sub Category
+router.put(
+  "/subcat/update/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "category_update")
+      .then((rolePerm) => {
+        if (!req.body.name || !req.params.id) {
+          res.status(400).send({
+            msg: "Please pass ID and required fields.",
+          });
+        } else {
+          SubCategories.findByPk(req.params.id)
+            .then((category) => {
+              SubCategories.update(
+                {
+                  name: req.body.name || category.name,
+                  cat_id: req.body.cat_id || category.cat_id,
+                },
+                {
+                  where: {
+                    id: req.params.id,
+                  },
+                }
+              )
+                .then((_) => {
+                  res.status(200).send({
+                    msg: "Resourse updated",
+                  });
+                })
+                .catch((err) => res.status(400).send({ msg: err }));
+            })
+            .catch((error) => {
+              res.status(400).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Delete a Sub Category
+router.delete(
+  "/subcat/delete/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "category_delete")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass resourse ID.",
+          });
+        } else {
+          SubCategories.findByPk(req.params.id)
+            .then((category) => {
+              if (category) {
+                SubCategories.destroy({
+                  where: {
+                    id: req.params.id,
+                  },
+                })
+                  .then((_) => {
+                    res.status(200).send({
+                      msg: "Resourse deleted",
+                    });
+                  })
+                  .catch((err) => res.status(400).send({ msg: err }));
+              } else {
+                res.status(404).send({
+                  msg: "Resourse not found",
+                });
+              }
+            })
+            .catch((error) => {
+              res.status(400).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
 module.exports = router;

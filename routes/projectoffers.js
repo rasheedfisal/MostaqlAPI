@@ -1,16 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const User = require("../models").User;
-const UserProfile = require("../models").UserProfile;
-const ProjectOffer = require("../models").ProjectOffer;
+const {
+  User,
+  UserProfile,
+  ProjectOffer,
+  UserCredentials,
+} = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
-const Sequelize = require("sequelize");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -72,21 +74,31 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          ProjectOffer.create({
-            proj_id: req.body.proj_id,
-            user_offered_id: req.user.id,
-            price: req.body.price,
-            days_to_deliver: req.body.days_to_deliver,
-            message_desc: req.body.message_desc,
-            pdf_url: req.file?.path,
-          })
-            .then((offer) => res.status(201).send(offer))
-            .catch((error) => {
-              res.status(400).send({
-                success: false,
-                msg: error,
-              });
-            });
+          UserCredentials.findOne({ where: { user_id: req.user.id } })
+            .then((credential) => {
+              if (credential.is_authorized) {
+                ProjectOffer.create({
+                  proj_id: req.body.proj_id,
+                  user_offered_id: req.user.id,
+                  price: req.body.price,
+                  days_to_deliver: req.body.days_to_deliver,
+                  message_desc: req.body.message_desc,
+                  pdf_url: req.file?.path,
+                })
+                  .then((offer) => res.status(201).send(offer))
+                  .catch((error) => {
+                    res.status(500).send({
+                      success: false,
+                      msg: error,
+                    });
+                  });
+              } else {
+                res.status(401).send({
+                  msg: "user credentials are not verified",
+                });
+              }
+            })
+            .catch((error) => res.status(500).send({ msg: error }));
         }
       })
       .catch((error) => {
@@ -133,15 +145,6 @@ router.get(
                 "fullname",
                 "phone",
                 getPath(req, "imgPath"),
-                // [
-                //   Sequelize.fn(
-                //     "concat",
-                //     req.headers.host,
-                //     "/",
-                //     Sequelize.col("projectoffers.client.imgPath")
-                //   ),
-                //   "avatar",
-                // ],
               ],
               include: {
                 model: UserProfile,

@@ -9,6 +9,9 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      UserCredentials.belongsTo(models.User, {
+        foreignKey: "user_id",
+      });
     }
   }
   UserCredentials.init(
@@ -18,6 +21,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
         primaryKey: true,
+      },
+      user_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
       },
       attachments: {
         type: DataTypes.STRING,

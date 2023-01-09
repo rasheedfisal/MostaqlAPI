@@ -30,12 +30,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "receiver_id",
         as: "receiver",
       });
-      User.hasMany(models.Protfolio, {
+      User.hasMany(models.Portfolio, {
         foreignKey: "user_id",
         as: "userportfolio",
       });
       User.belongsTo(models.Role, {
         foreignKey: "role_id",
+      });
+      User.hasOne(models.UserCredentials, {
+        foreignKey: "user_id",
+        as: "usercredentials",
       });
       //User.hasOne(models.Role);
     }
