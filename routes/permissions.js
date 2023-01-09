@@ -52,7 +52,7 @@ router.get(
       .checkPermission(req.user.role_id, "permissions_get_all")
       .then((rolePerm) => {
         Permission.findAll({
-          order: [["perm_name", "ASC"]],
+          order: [["perm_description", "ASC"]],
         })
           // Permission.findAndCountAll({ limit, offset })
           .then((perms) => {
