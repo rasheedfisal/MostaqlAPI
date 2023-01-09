@@ -51,7 +51,9 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "permissions_get_all")
       .then((rolePerm) => {
-        Permission.findAll()
+        Permission.findAll({
+          order: [["perm_name", "ASC"]],
+        })
           // Permission.findAndCountAll({ limit, offset })
           .then((perms) => {
             res.status(200).send(perms);
