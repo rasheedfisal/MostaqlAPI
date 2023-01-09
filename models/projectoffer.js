@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_offered_id",
         as: "client",
       });
+      ProjectOffer.belongsTo(models.CommissionRate, {
+        foreignKey: "rate_id",
+        as: "commissionRate",
+      });
     }
   }
   ProjectOffer.init(
@@ -51,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
       pdf_url: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      rate_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
       },
     },
     // {

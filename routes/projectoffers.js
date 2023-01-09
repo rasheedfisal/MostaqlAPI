@@ -14,6 +14,7 @@ const Helper = require("../utils/helper");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
+const { getCurrentRate } = require("../utils/commissions");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -88,6 +89,8 @@ router.post(
                         .status(400)
                         .send({ msg: "User Cannot add offer to his project!" });
 
+                    const currentRate = getCurrentRate();
+
                     ProjectOffer.create({
                       proj_id: req.body.proj_id,
                       user_offered_id: req.user.id,
@@ -95,6 +98,7 @@ router.post(
                       days_to_deliver: req.body.days_to_deliver,
                       message_desc: req.body.message_desc,
                       pdf_url: req.file?.path,
+                      rate_id: currentRate?.id,
                     })
                       .then((offer) => res.status(201).send(offer))
                       .catch((error) => {

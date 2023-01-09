@@ -22,7 +22,7 @@ router.post(
           });
         } else {
           if (req.body.iscurrent) {
-            CommissionRate.update({ iscurrent: false })
+            CommissionRate.update({ iscurrent: 0 }, { where: {} })
               .then((_) => console.log("updated"))
               .catch((err) => console.log(err));
           }
@@ -59,7 +59,9 @@ router.get(
       .checkPermission(req.user.role_id, "commission_rate_get_all")
       .then((rolePerm) => {
         // console.log(rolePerm);
-        CommissionRate.findAll()
+        CommissionRate.findAll({
+          order: [["createdAt", "DESC"]],
+        })
           .then((rates) => res.status(200).send(rates))
           .catch((error) => {
             res.status(400).send({
