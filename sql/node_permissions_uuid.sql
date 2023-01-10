@@ -58,6 +58,13 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'commission_rate_update', 'Update Commission Rate', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'commission_rate_delete', 'Delete Commission Rate', now(), now());
 
+------------------- Commission Rate -------------------
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_add', 'Add Common Question', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_get_all', 'Get All Common Question', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_get', 'Get Common Question', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_update', 'Update Common Question', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_delete', 'Delete Common Question', now(), now());
+
 
 ------------------- Project Offers-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'project_offer_add', 'Add Project Offer', now(), now());

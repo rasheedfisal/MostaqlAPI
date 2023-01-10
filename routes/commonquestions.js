@@ -122,11 +122,6 @@ router.put(
         } else {
           CommonQuestions.findByPk(req.params.id)
             .then((common) => {
-              if (req.body.iscurrent) {
-                CommonQuestions.update({ iscurrent: false })
-                  .then((_) => console.log("updated"))
-                  .catch((err) => console.log(err));
-              }
               CommonQuestions.update(
                 {
                   question: req.body.question || common.question,
