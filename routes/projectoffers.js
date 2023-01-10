@@ -90,23 +90,32 @@ router.post(
                         .send({ msg: "User Cannot add offer to his project!" });
 
                     const currentRate = getCurrentRate();
+                    currentRate
+                      .then((rate) => {
+                        if (!rate?.id) {
+                          return res
+                            .status(404)
+                            .send({ msg: "Commission Rate is Not Found" });
+                        }
 
-                    ProjectOffer.create({
-                      proj_id: req.body.proj_id,
-                      user_offered_id: req.user.id,
-                      price: req.body.price,
-                      days_to_deliver: req.body.days_to_deliver,
-                      message_desc: req.body.message_desc,
-                      pdf_url: req.file?.path,
-                      rate_id: currentRate?.id,
-                    })
-                      .then((offer) => res.status(201).send(offer))
-                      .catch((error) => {
-                        res.status(500).send({
-                          success: false,
-                          msg: error,
-                        });
-                      });
+                        ProjectOffer.create({
+                          proj_id: req.body.proj_id,
+                          user_offered_id: req.user.id,
+                          price: req.body.price,
+                          days_to_deliver: req.body.days_to_deliver,
+                          message_desc: req.body.message_desc,
+                          pdf_url: req.file?.path,
+                          rate_id: rate?.id,
+                        })
+                          .then((offer) => res.status(201).send(offer))
+                          .catch((error) => {
+                            res.status(500).send({
+                              success: false,
+                              msg: error,
+                            });
+                          });
+                      })
+                      .catch((err) => res.status(500).send({ msg: err }));
                   })
                   .catch((err) => {
                     res.status(500).send({ msg: err });
