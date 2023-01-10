@@ -24,7 +24,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       answer: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT("long"),
+        allowNull: false,
+      },
+      order_no: {
+        type: DataTypes.FLOAT,
         allowNull: false,
       },
     },

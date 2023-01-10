@@ -26,6 +26,10 @@ module.exports = (sequelize, DataTypes) => {
       Project.belongsTo(models.SubCategories, {
         foreignKey: "category_id",
       });
+      Project.hasMany(models.UserReviews, {
+        foreignKey: "proj_id",
+        as: "review_project",
+      });
     }
   }
   Project.init(
@@ -46,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       proj_description: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT("long"),
         allowNull: false,
       },
       category_id: {
@@ -68,6 +72,9 @@ module.exports = (sequelize, DataTypes) => {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
+      },
+      skills: {
+        type: DataTypes.TEXT("long"),
       },
       // IsOffered: {
       //   type: new DataTypes.VIRTUAL(DataTypes.BOOLEAN, ["id"]),

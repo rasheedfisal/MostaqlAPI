@@ -102,6 +102,7 @@ router.post(
                       proj_period: req.body.proj_period,
                       attatchment_file: req.file?.path,
                       proj_status_id: status.id,
+                      skills: req.body?.skills,
                     })
                       .then((profile) => res.status(201).send(profile))
                       .catch((error) => {
@@ -152,12 +153,13 @@ router.get(
             "id",
             "proj_title",
             "proj_description",
+            "skills",
             "proj_period",
             "CreatedAt",
             getPath(req, "attatchment_file"),
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = Project.id)`
               ),
               "OffersCount",
             ],
@@ -237,12 +239,13 @@ router.get(
             "id",
             "proj_title",
             "proj_description",
+            "skills",
             "proj_period",
             "CreatedAt",
             getPath(req, "attatchment_file"),
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = Project.id)`
               ),
               "OffersCount",
             ],
@@ -412,6 +415,7 @@ router.put(
                   attatchment_file: req.file?.path || project.attatchment_file,
                   proj_status_id:
                     req.body.proj_status_id || project.proj_status_id,
+                  skills: req.body?.skills || project.skills,
                 },
                 {
                   where: {
@@ -515,6 +519,7 @@ router.get(
             "id",
             "proj_title",
             "proj_description",
+            "skills",
             "proj_period",
             "CreatedAt",
             //getPath(req, "attatchment_file"),
@@ -526,7 +531,7 @@ router.get(
             // ],
             [
               Sequelize.literal(
-                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = proj_id)`
+                `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = Project.id)`
               ),
               "OffersCount",
             ],
@@ -587,6 +592,7 @@ router.get(
             "id",
             "proj_title",
             "proj_description",
+            "skills",
             "proj_period",
             "CreatedAt",
             getPath(req, "attatchment_file"),
@@ -607,6 +613,12 @@ router.get(
                 `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = "${req.params.id}")`
               ),
               "OffersCount",
+            ],
+            [
+              Sequelize.literal(
+                `(select ratepercent from commissionrates where iscurrent=1 limit 1)`
+              ),
+              "rate_percent",
             ],
           ],
           include: [
