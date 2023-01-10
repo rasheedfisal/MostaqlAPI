@@ -54,7 +54,7 @@ app.use(`${apiV1}/project`, ProjectRouter);
 app.use(`${apiV1}/offer`, ProjectOfferRouter);
 app.use(`${apiV1}/conversations`, ConversationsRouter);
 app.use(`${apiV1}/rate`, CommissionsRouter);
-app.use(`${apiV1}/questions`, CommissionsRouter);
+app.use(`${apiV1}/questions`, CommonQuestionsRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
