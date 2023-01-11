@@ -110,7 +110,8 @@ router.post(
               password: req.body.password,
               fullname: req.body.fullname,
               phone: req.body.phone,
-              imgPath: req.files?.profileImage[0]?.path,
+              imgPath:
+                req.files?.profileImage && req.files?.profileImage[0]?.path,
               role_id: req.body.role_id,
             },
             { transaction }
@@ -119,7 +120,8 @@ router.post(
           await UserCredentials.create(
             {
               user_id: user.id,
-              attachments: req.files?.Credentials[0]?.path,
+              attachments:
+                req.files?.Credentials && req.files?.Credentials[0]?.path,
             },
             { transaction }
           );
