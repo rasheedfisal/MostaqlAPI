@@ -29,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       attachments: {
         type: DataTypes.STRING,
-        allowNull: false,
       },
       is_authorized: {
         type: DataTypes.BOOLEAN,
