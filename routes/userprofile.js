@@ -1,6 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const { User, UserProfile, UserSkills, Portfolio } = require("../models");
+const {
+  User,
+  UserProfile,
+  UserSkills,
+  Portfolio,
+  UserCredentials,
+} = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
@@ -232,6 +238,11 @@ router.get(
                 getNestedPath(req, "profileOwner.imgPath", "imgpath"),
               ],
               include: [
+                {
+                  model: UserCredentials,
+                  as: "usercredentials",
+                  attributes: ["attachments", "is_authorized"],
+                },
                 {
                   model: UserSkills,
                   as: "userskills",

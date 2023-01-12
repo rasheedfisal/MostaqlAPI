@@ -1,6 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const { User, Role, Permission, UserCredentials } = require("../models");
+const {
+  User,
+  Role,
+  Permission,
+  UserCredentials,
+  UserProfile,
+} = require("../models");
 const multer = require("multer");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -225,6 +231,10 @@ router.post(
                 },
               },
             },
+            // {
+            //   model: UserProfile,
+            //   attributes: ["perm_name"],
+            // },
           ],
         })
           .then((user) => res.status(200).send(convertToUserInfoDto(user))) //
