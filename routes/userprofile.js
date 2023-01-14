@@ -84,30 +84,31 @@ router.post(
                       msg: error,
                     });
                   });
-              }
-              UserProfile.update(
-                {
-                  about_user: req.body.about_user || profile.about_user,
-                  specialization:
-                    req.body.specialization || profile.specialization,
-                },
-                {
-                  where: {
-                    id: profile.id,
+              } else {
+                UserProfile.update(
+                  {
+                    about_user: req.body.about_user || profile.about_user,
+                    specialization:
+                      req.body.specialization || profile.specialization,
                   },
-                }
-              )
-                .then((_) => {
-                  res.status(200).send({
-                    msg: "Resourse updated",
-                  });
-                })
-                .catch((err) =>
-                  res.status(400).send({
-                    success: false,
-                    msg: err,
+                  {
+                    where: {
+                      id: profile.id,
+                    },
+                  }
+                )
+                  .then((_) => {
+                    res.status(200).send({
+                      msg: "Resourse updated",
+                    });
                   })
-                );
+                  .catch((err) =>
+                    res.status(400).send({
+                      success: false,
+                      msg: err,
+                    })
+                  );
+              }
             })
             .catch((error) => res.status(400).send({ msg: error }));
         }
@@ -267,7 +268,9 @@ router.get(
             },
           ],
         })
-          .then((profile) => res.status(200).send(profile))
+          .then((profile) => {
+            res.status(200).send(profile);
+          })
           .catch((error) => {
             console.log(error);
             res.status(400).send({
