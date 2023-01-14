@@ -230,7 +230,8 @@ router.post("/signin", loginLimiter, function (req, res) {
             JSON.parse(JSON.stringify(userDto)),
             process.env.JWT_SECRET,
             {
-              expiresIn: "1h", //86400 * 30 in seconds = 30 days
+              //expiresIn: "1h", //86400 * 30 in seconds = 30 days
+              expiresIn: "1d", //temp
             }
           );
           const refreshToken = jwt.sign(
@@ -405,7 +406,8 @@ router.get("/refresh", function (req, res) {
           const accessToken = jwt.sign(
             JSON.parse(JSON.stringify(convertToUserInfoDto(user))),
             process.env.JWT_SECRET,
-            { expiresIn: "1h" }
+            { expiresIn: "1d" } // temp
+            // { expiresIn: "1h" }
           );
 
           res.json({

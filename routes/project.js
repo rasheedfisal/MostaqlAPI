@@ -111,7 +111,10 @@ router.post(
                         const allEnginner = getAllEnginnerEmailList();
                         allEnginner
                           .then((eng) => {
-                            sendToAllEnginners(eng, project);
+                            sendToAllEnginners(
+                              eng.map((a) => a.email),
+                              project
+                            );
                           })
                           .catch((err) => {
                             console.error(err);
