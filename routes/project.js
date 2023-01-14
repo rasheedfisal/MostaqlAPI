@@ -242,7 +242,7 @@ router.get(
 
 // Get List of Projects by Sub Category
 router.get(
-  "/",
+  "/subcat",
   passport.authenticate("jwt", {
     session: false,
   }),
