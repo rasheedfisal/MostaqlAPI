@@ -223,6 +223,27 @@ router.post("/signin", loginLimiter, function (req, res) {
         });
       }
 
+      const isEngnieer = user.Role.permissions.some(
+        (el) => el.perm_name === "is_enginner"
+      );
+      const isProjectOwner = user.Role.permissions.some(
+        (el) => el.perm_name === "is_project_owner"
+      );
+      const isBoth = isEngnieer && isProjectOwner ? true : false;
+
+      const status = isBoth
+        ? "BOTH"
+        : isEngnieer
+        ? "ENGINEER"
+        : isProjectOwner
+        ? "OWNER"
+        : "NONE";
+
+      if (status === "NONE")
+        return res.status(401).send({
+          msg: "Unauthorized",
+        });
+
       user.comparePassword(req.body.password, (err, isMatch) => {
         if (isMatch && !err) {
           const userDto = convertToUserInfoDto(user);
@@ -249,8 +270,8 @@ router.post("/signin", loginLimiter, function (req, res) {
 
           res.json({
             success: true,
-            //token: "JWT " + token,
-            token: token,
+            token,
+            status,
           });
         } else {
           res.status(401).send({
@@ -304,9 +325,6 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
           msg: "User Account is Locked.",
         });
       }
-
-      console.log(JSON.stringify(user));
-
       const hasAccessToDashboard = user.Role.permissions.some(
         (el) => el.perm_name === "can_access_dashboard"
       );

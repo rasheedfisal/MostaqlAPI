@@ -81,7 +81,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 -------------------Is Enginner-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'is_enginner', 'is the user enginner', now(), now());
 -------------------Is Project Owner-------------------
-INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'is_product_owner', 'is the user project owner', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'is_project_owner', 'is the user project owner', now(), now());
 
 
 --permission
