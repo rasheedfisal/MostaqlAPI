@@ -6,6 +6,8 @@ const {
   Permission,
   UserCredentials,
   UserProfile,
+  UserSkills,
+  Portfolio,
 } = require("../models");
 const multer = require("multer");
 const passport = require("passport");
@@ -14,7 +16,7 @@ const Helper = require("../utils/helper");
 const { Op } = require("sequelize");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
-const { getPath } = require("../utils/fileUrl");
+const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const db = require("../models");
 
@@ -243,6 +245,67 @@ router.post(
           });
       })
       .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// show profile data
+router.post(
+  "/show",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_get")
+      .then((rolePerm) => {
+        User.findByPk(req.user?.id, {
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            "phone",
+            getNestedPath(req, "User.imgPath", "imgpath"),
+            "is_active",
+          ],
+          include: [
+            {
+              model: UserProfile,
+              as: "userprofiles",
+              attributes: ["about_user", "specialization"],
+            },
+            {
+              model: UserCredentials,
+              as: "usercredentials",
+              attributes: ["attachments", "is_authorized"],
+            },
+            {
+              model: UserSkills,
+              as: "userskills",
+              attributes: ["skill_name"],
+            },
+            {
+              model: Portfolio,
+              as: "userportfolio",
+              attributes: [
+                "title",
+                "description",
+                getNestedPath(req, "userportfolio.imgPath", "imgpath"),
+                "url_link",
+                "createdAt",
+              ],
+            },
+          ],
+        })
+          .then((user) => res.status(200).send(user)) //
+          .catch((error) => {
+            console.error(error);
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        console.error(error);
         res.status(403).send({ msg: error });
       });
   }
