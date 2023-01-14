@@ -17,8 +17,11 @@ require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
 const Sequelize = require("sequelize");
+const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
+const { getAllEnginnerEmailList } = require("../utils/findUsers");
+const { sendToAllEnginners } = require("../utils/advanceMailer");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -104,7 +107,17 @@ router.post(
                       proj_status_id: status.id,
                       skills: req.body?.skills,
                     })
-                      .then((profile) => res.status(201).send(profile))
+                      .then((project) => {
+                        const allEnginner = getAllEnginnerEmailList();
+                        allEnginner
+                          .then((eng) => {
+                            sendToAllEnginners(eng, project);
+                          })
+                          .catch((err) => {
+                            console.error(err);
+                          });
+                        res.status(201).send(project);
+                      })
                       .catch((error) => {
                         res.status(400).send({
                           success: false,
@@ -140,7 +153,7 @@ router.get(
     session: false,
   }),
   function (req, res) {
-    const { page, size } = req.query;
+    const { page, size, search } = req.query;
     const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "project_get_all")
@@ -199,6 +212,11 @@ router.get(
             },
           ],
           distinct: true,
+          where: {
+            proj_title: {
+              [Op.like]: `%${search}%`,
+            },
+          },
         })
           .then((projects) =>
             res.status(200).send(getPagingData(projects, page, limit))

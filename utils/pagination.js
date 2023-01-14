@@ -1,7 +1,8 @@
 module.exports = {
   getPagination: (page, size) => {
     const limit = size ? +size : 10;
-    const offset = page ? (page * limit === limit ? 0 : page * limit) : 0;
+    const offset = (page - 1) * limit; // mysql offset starts at 0
+    //const offset = (page - 1) * limit + 1; // for future refrence if some database offset starts at 1
 
     return { limit, offset };
   },
@@ -13,3 +14,7 @@ module.exports = {
     return { totalItems, results, totalPages, currentPage };
   },
 };
+
+// 1, 10
+// limit = 10
+//offset = 10
