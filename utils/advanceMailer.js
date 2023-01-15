@@ -32,4 +32,26 @@ module.exports = {
       console.error(error);
     }
   },
+  sendToUserAuthorize: async (user, status) => {
+    try {
+      var variables = {
+        username: user.fullname,
+        status,
+      };
+      const { html, text, subject } = await templates.render(
+        "authorizeuser.html",
+        variables
+      );
+      var emailInfo = {
+        from: process.env.MAILING_EMAIL,
+        to: usersList,
+        subject: "Authorization Request",
+        text: text,
+        html: html,
+      };
+      emailProcessor.sendMail(emailInfo);
+    } catch (error) {
+      console.error(error);
+    }
+  },
 };

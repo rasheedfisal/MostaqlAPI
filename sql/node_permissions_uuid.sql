@@ -7,6 +7,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_lock_unlock', 'Lock and Unlock User', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_get_enginners', 'get list of enginners', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_authorize', 'Authorize and unAuthorize user', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_add_find_credentails', 'Create Credentails', now(), now());
 
 ------------------- Roles-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'role_add', 'Add Role', now(), now());

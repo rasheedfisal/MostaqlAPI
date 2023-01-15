@@ -166,6 +166,56 @@ router.get(
   }
 );
 
+// Get List of Credintial Users
+router.get(
+  "/credentials",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "user_get_all")
+      .then((rolePerm) => {
+        User.findAndCountAll({
+          limit,
+          offset,
+          include: [
+            {
+              model: UserCredentials,
+              as: "usercredentials",
+              required: true,
+              attributes: ["id", getPath(req, "attachments"), "is_authorized"],
+            },
+          ],
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            "phone",
+            getPath(req, "imgPath"),
+            "is_active",
+            "createdAt",
+          ],
+          //group: ["id"],
+          distinct: true,
+          order: [["createdAt", "desc"]],
+        })
+          .then((users) => {
+            //res.setHeader("x-total-count", users.count);
+            res.status(200).send(getPagingData(users, page, limit));
+          })
+          .catch((error) => {
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
 // Get User by ID
 router.get(
   "/:id",
@@ -278,7 +328,7 @@ router.post(
             {
               model: UserCredentials,
               as: "usercredentials",
-              attributes: ["attachments", "is_authorized"],
+              attributes: [getPath(req, "attachments"), "is_authorized"],
             },
             {
               model: UserSkills,
@@ -579,27 +629,70 @@ router.put(
             },
           })
             .then(([credentials, created]) => {
-              if (!credentials)
+              if (!credentials) {
                 return res.status(404).send({ msg: "User Not Found" });
-
-              // console.log(credentials.is_authorized);
-              // console.log(created);
-              UserCredentials.update(
-                {
-                  is_authorized: !credentials.is_authorized,
-                },
-                {
-                  where: {
-                    user_id: credentials.user_id,
+              } else {
+                // console.log(credentials.is_authorized);
+                // console.log(created);
+                UserCredentials.update(
+                  {
+                    is_authorized: !credentials.is_authorized,
                   },
-                }
-              )
-                .then((_) => {
-                  res.status(200).send({
-                    msg: "Credential status changed",
-                  });
-                })
-                .catch((err) => res.status(500).send({ msg: err }));
+                  {
+                    where: {
+                      user_id: credentials.user_id,
+                    },
+                  }
+                )
+                  .then((_) => {
+                    res.status(200).send({
+                      msg: "Credential status changed",
+                    });
+                  })
+                  .catch((err) => res.status(500).send({ msg: err }));
+              }
+            })
+            .catch((error) =>
+              res.status(500).send({
+                msg: error,
+              })
+            );
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// find or create Credentails
+router.post(
+  "/credentials/user",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_add_find_credentails")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass user ID.",
+          });
+        } else {
+          UserCredentials.findOrCreate({
+            where: { user_id: req.user?.id },
+            defaults: {
+              user_id: req.user?.id,
+              is_authorized: false,
+            },
+          })
+            .then(([credentials, created]) => {
+              if (!credentials) {
+                return res.status(404).send({ msg: "User Not Found" });
+              } else {
+                return res.status(200).send(credentials);
+              }
             })
             .catch((error) =>
               res.status(500).send({

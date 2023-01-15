@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Authorize User!</title>
+  </head>
+  <body>
+    <h3><strong>Hi {{username}}, </strong></h3>
+    <h4>User Authorization</h4>
+    <br />
+    <div>
+      <p>your request for authorization has been {{status}}</p>
+    </div>
+    {% if status === 'accepted' %}
+    <p>you can now add offer or create project based on your role</p>
+    {% endif %}
+    <br />
+    <br />
+    Thanks,<br />
+    Architect Team
+  </body>
+</html>
