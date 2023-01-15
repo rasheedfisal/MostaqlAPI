@@ -183,6 +183,9 @@ router.get(
           offset,
           include: [
             {
+              model: Role,
+            },
+            {
               model: UserCredentials,
               as: "usercredentials",
               required: true,
