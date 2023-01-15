@@ -19,6 +19,7 @@ const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const db = require("../models");
+const { sendToUserAuthorize } = require("../utils/advanceMailer");
 
 const mergeUserPermissions = (permissions) => {
   let mergedPermission = [];
@@ -648,9 +649,23 @@ router.put(
                   }
                 )
                   .then((_) => {
-                    res.status(200).send({
-                      msg: "Credential status changed",
-                    });
+                    User.findByPk(req.params?.id)
+                      .then((user) => {
+                        const status =
+                          !credentials.is_authorized === true
+                            ? "Accepted"
+                            : "Rejected";
+                        sendToUserAuthorize(user, status)
+                          .then((_) => {
+                            return res
+                              .status(200)
+                              .send({ msg: "Status has Changed Successfully" });
+                          })
+                          .catch((err) => {
+                            return res.status(500).send({ msg: err });
+                          });
+                      })
+                      .catch((err) => console.error(err));
                   })
                   .catch((err) => res.status(500).send({ msg: err }));
               }

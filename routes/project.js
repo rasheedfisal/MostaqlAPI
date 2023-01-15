@@ -20,8 +20,8 @@ const Sequelize = require("sequelize");
 const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
-const { getAllEnginnerEmailList } = require("../utils/findUsers");
-const { sendToAllEnginners } = require("../utils/advanceMailer");
+// const { getAllEnginnerEmailList } = require("../utils/findUsers");
+// const { sendToAllEnginners } = require("../utils/advanceMailer");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -108,17 +108,17 @@ router.post(
                       skills: req.body?.skills,
                     })
                       .then((project) => {
-                        const allEnginner = getAllEnginnerEmailList();
-                        allEnginner
-                          .then((eng) => {
-                            sendToAllEnginners(
-                              eng.map((a) => a.email),
-                              project
-                            );
-                          })
-                          .catch((err) => {
-                            console.error(err);
-                          });
+                        // const allEnginner = getAllEnginnerEmailList();
+                        // allEnginner
+                        //   .then((eng) => {
+                        //     sendToAllEnginners(
+                        //       eng.map((a) => a.email),
+                        //       project
+                        //     );
+                        //   })
+                        //   .catch((err) => {
+                        //     console.error(err);
+                        //   });
                         res.status(201).send(project);
                       })
                       .catch((error) => {

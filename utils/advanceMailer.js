@@ -34,9 +34,21 @@ module.exports = {
   },
   sendToUserAuthorize: async (user, status) => {
     try {
+      var today = new Date();
+      var date =
+        today.getFullYear() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getDate();
+      var time =
+        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+      var dateTime = date + " " + time;
+
       var variables = {
         username: user.fullname,
         status,
+        time: dateTime,
       };
       const { html, text, subject } = await templates.render(
         "authorizeuser.html",
@@ -44,7 +56,7 @@ module.exports = {
       );
       var emailInfo = {
         from: process.env.MAILING_EMAIL,
-        to: usersList,
+        to: user.email,
         subject: "Authorization Request",
         text: text,
         html: html,
