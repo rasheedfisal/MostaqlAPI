@@ -687,6 +687,7 @@ router.get(
                 "days_to_deliver",
                 "message_desc",
                 getPath(req, "pdf_url"),
+                "createdAt",
               ],
               include: [
                 {
