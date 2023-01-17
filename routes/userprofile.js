@@ -622,7 +622,7 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "profile_add")
       .then((rolePerm) => {
-        if (!req.body.title || !req.body.description || !req.file?.path) {
+        if (!req.body.title || !req.body.description) {
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
