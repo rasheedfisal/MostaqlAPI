@@ -161,6 +161,112 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "project_get_all")
       .then((rolePerm) => {
+        ProjStatus.findOne({
+          where: {
+            stat_name: "Open",
+          },
+        })
+          .then((stat) => {
+            Project.findAndCountAll({
+              limit,
+              offset,
+              attributes: [
+                "id",
+                "proj_title",
+                "proj_description",
+                "skills",
+                "proj_period",
+                "CreatedAt",
+                getPath(req, "attatchment_file"),
+                [
+                  Sequelize.literal(
+                    `(SELECT COUNT(*) FROM projectoffers AS offer WHERE offer.proj_id = Project.id)`
+                  ),
+                  "OffersCount",
+                ],
+              ],
+              include: [
+                {
+                  model: User,
+                  as: "owner",
+                  attributes: [
+                    "fullname",
+                    [
+                      Sequelize.fn(
+                        "concat",
+                        req.headers.host,
+                        "/",
+                        Sequelize.col("owner.imgPath")
+                      ),
+                      "avatar",
+                    ],
+                  ],
+                },
+                {
+                  model: SubCategories,
+                  attributes: ["name"],
+                  include: {
+                    model: Category,
+                    attributes: ["cat_name", getPath(req, "cat_img")],
+                  },
+                },
+                {
+                  model: PriceRange,
+                  attributes: ["range_name"],
+                },
+                {
+                  model: ProjStatus,
+                  attributes: ["stat_name"],
+                },
+              ],
+              distinct: true,
+              where: {
+                proj_title: {
+                  [Op.like]: `%${search}%`,
+                },
+                proj_status_id: {
+                  [Op.eq]: stat.id,
+                },
+              },
+            })
+              .then((projects) =>
+                res.status(200).send(getPagingData(projects, page, limit))
+              )
+              .catch((error) => {
+                res.status(500).send({
+                  success: false,
+                  msg: error,
+                });
+              });
+          })
+          .catch((err) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+        //console.log(rolePerm);
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+// Get Admin List of Projects
+router.get(
+  "/admin",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size, search } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "project_get_all")
+      .then((rolePerm) => {
         //console.log(rolePerm);
         Project.findAndCountAll({
           limit,
