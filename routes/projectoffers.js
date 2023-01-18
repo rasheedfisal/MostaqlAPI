@@ -231,7 +231,7 @@ router.put(
             msg: "missing fields please add required info.",
           });
         } else {
-          if (offerstatus) {
+          if (req.body.offerstatus) {
             sequelize
               .transaction((t) => {
                 // chain all your queries here. make sure you return them.
@@ -259,7 +259,7 @@ router.put(
                   .then((_) => {
                     return ProjectOffer.update(
                       {
-                        accept_status: offerstatus,
+                        accept_status: req.body.offerstatus,
                       },
                       {
                         where: {
@@ -310,7 +310,6 @@ router.put(
         }
       })
       .catch((error) => {
-        // console.log(error);
         res.status(403).send({
           success: false,
           msg: error,
