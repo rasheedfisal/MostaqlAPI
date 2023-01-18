@@ -306,7 +306,94 @@ router.post(
       });
   }
 );
-
+// show profile data By ID
+router.post(
+  "/show/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "user_get")
+      .then((rolePerm) => {
+        User.findByPk(req.params.id, {
+          attributes: [
+            "id",
+            "email",
+            "fullname",
+            "phone",
+            getNestedPath(req, "User.imgPath", "imgpath"),
+            "is_active",
+            [
+              Sequelize.literal(
+                `(SELECT (SELECT SUM(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = User.id) / (SELECT count(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = User.id))`
+              ),
+              "review_avg",
+            ],
+          ],
+          include: [
+            {
+              model: UserProfile,
+              as: "userprofiles",
+              attributes: ["about_user", "specialization"],
+            },
+            {
+              model: UserCredentials,
+              as: "usercredentials",
+              attributes: [getPath(req, "attachments"), "is_authorized"],
+            },
+            {
+              model: UserSkills,
+              as: "userskills",
+              attributes: ["skill_name"],
+            },
+            {
+              model: Portfolio,
+              as: "userportfolio",
+              attributes: [
+                "title",
+                "description",
+                getNestedPath(req, "userportfolio.imgPath", "imgpath"),
+                "url_link",
+                "createdAt",
+              ],
+            },
+            {
+              model: UserReviews,
+              attributes: ["comment", "star_rate", "createdAt"],
+              as: "talentreview",
+              include: [
+                {
+                  model: User,
+                  attributes: [
+                    "id",
+                    "email",
+                    "fullname",
+                    "phone",
+                    getNestedPath(req, "talentreview.owner.imgPath", "imgpath"),
+                  ],
+                  as: "owner",
+                },
+                {
+                  model: Project,
+                  attributes: ["proj_title", "proj_description", "proj_period"],
+                },
+              ],
+            },
+          ],
+        })
+          .then((user) => res.status(200).send(user)) //
+          .catch((error) => {
+            console.error(error);
+            res.status(400).send({ msg: error });
+          });
+      })
+      .catch((error) => {
+        console.error(error);
+        res.status(403).send({ msg: error });
+      });
+  }
+);
 // show profile data
 router.post(
   "/show",
