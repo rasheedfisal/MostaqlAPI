@@ -69,6 +69,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 ------------------- User Reviews -------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'review_add', 'Add Review To User', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'reviews_talent_get_all', 'Get All User Reviews', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'reviews_owner_get_all', 'Get All Owner Reviews', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'review_get', 'Get Review', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'review_update', 'Update Review', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'review_delete', 'Delete Review', now(), now());

@@ -46,6 +46,43 @@ router.post(
   }
 );
 
+// Get List of Owner Reviews
+router.get(
+  "/owner",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "reviews_owner_get_all")
+      .then((rolePerm) => {
+        UserReviews.findAll(
+          {
+            include: [
+              {
+                model: User,
+                as: "owner",
+              },
+            ],
+          },
+          { where: { owner_id: req.user?.id } }
+        )
+          .then((reviews) => res.status(200).send(reviews))
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
 // Get List of Talent Reviews
 router.get(
   "/talent",

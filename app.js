@@ -21,6 +21,7 @@ var ProjectOfferRouter = require("./routes/projectoffers");
 var ConversationsRouter = require("./routes/conversations");
 var CommissionsRouter = require("./routes/commissionrate");
 var CommonQuestionsRouter = require("./routes/commonquestions");
+var UserReviewsRouter = require("./routes/userreviews");
 
 var app = express();
 
@@ -55,6 +56,7 @@ app.use(`${apiV1}/offer`, ProjectOfferRouter);
 app.use(`${apiV1}/conversations`, ConversationsRouter);
 app.use(`${apiV1}/rate`, CommissionsRouter);
 app.use(`${apiV1}/questions`, CommonQuestionsRouter);
+app.use(`${apiV1}/reviews`, UserReviewsRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
