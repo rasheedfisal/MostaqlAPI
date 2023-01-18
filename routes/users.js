@@ -8,6 +8,8 @@ const {
   UserProfile,
   UserSkills,
   Portfolio,
+  UserReviews,
+  Project,
 } = require("../models");
 const multer = require("multer");
 const passport = require("passport");
@@ -20,6 +22,7 @@ const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const db = require("../models");
 const { sendToUserAuthorize } = require("../utils/advanceMailer");
+const Sequelize = require("sequelize");
 
 const mergeUserPermissions = (permissions) => {
   let mergedPermission = [];
@@ -322,6 +325,12 @@ router.post(
             "phone",
             getNestedPath(req, "User.imgPath", "imgpath"),
             "is_active",
+            [
+              Sequelize.literal(
+                `(SELECT (SELECT SUM(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = User.id) / (SELECT count(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = User.id))`
+              ),
+              "review_avg",
+            ],
           ],
           include: [
             {
@@ -348,6 +357,28 @@ router.post(
                 getNestedPath(req, "userportfolio.imgPath", "imgpath"),
                 "url_link",
                 "createdAt",
+              ],
+            },
+            {
+              model: UserReviews,
+              attributes: ["comment", "star_rate", "createdAt"],
+              as: "talentreview",
+              include: [
+                {
+                  model: User,
+                  attributes: [
+                    "id",
+                    "email",
+                    "fullname",
+                    "phone",
+                    getNestedPath(req, "talentreview.owner.imgPath", "imgpath"),
+                  ],
+                  as: "owner",
+                },
+                {
+                  model: Project,
+                  attributes: ["proj_title", "proj_description", "proj_period"],
+                },
               ],
             },
           ],

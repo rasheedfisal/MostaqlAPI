@@ -47,11 +47,11 @@ module.exports = (sequelize, DataTypes) => {
       });
       User.hasMany(models.UserReviews, {
         foreignKey: "owner_id",
-        as: "owner",
+        as: "ownerreview",
       });
       User.hasMany(models.UserReviews, {
         foreignKey: "talent_id",
-        as: "talent",
+        as: "talentreview",
       });
       //User.hasOne(models.Role);
     }

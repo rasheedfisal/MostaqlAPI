@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { UserReviews, User } = require("../models");
+const { UserReviews, User, Project } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
+const { getPath } = require("../utils/fileUrl");
 
 // add review
 router.post(
@@ -61,7 +62,18 @@ router.get(
             include: [
               {
                 model: User,
-                as: "owner",
+                attributes: [
+                  "id",
+                  "email",
+                  "fullname",
+                  "phone",
+                  getPath(req, "imgPath"),
+                ],
+                as: "talent",
+              },
+              {
+                model: Project,
+                attributes: ["proj_title", "proj_description", "proj_period"],
               },
             ],
           },
@@ -69,6 +81,7 @@ router.get(
         )
           .then((reviews) => res.status(200).send(reviews))
           .catch((error) => {
+            console.error(error);
             res.status(400).send({
               success: false,
               msg: error,
@@ -98,7 +111,18 @@ router.get(
             include: [
               {
                 model: User,
+                attributes: [
+                  "id",
+                  "email",
+                  "fullname",
+                  "phone",
+                  getPath(req, "imgPath"),
+                ],
                 as: "owner",
+              },
+              {
+                model: Project,
+                attributes: ["proj_title", "proj_description", "proj_period"],
               },
             ],
           },
