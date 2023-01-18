@@ -7,6 +7,8 @@ const {
   ProjectOffer,
   UserCredentials,
   Project,
+  sequelize,
+  ProjStatus,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -153,7 +155,6 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "project_offer_get_all")
       .then((rolePerm) => {
-        // console.log(rolePerm);
         ProjectOffer.findAndCountAll({
           limit,
           offset,
@@ -163,6 +164,7 @@ router.get(
             "price",
             "days_to_deliver",
             "message_desc",
+            "accept_status",
             "createdAt",
             getPath(req, "pdf_url"),
           ],
@@ -193,11 +195,10 @@ router.get(
             res.status(200).send(getPagingData(offers, page, limit))
           )
           .catch((error) => {
-            console.log(error);
-            // res.status(400).send({
-            //   success: false,
-            //   msg: error,
-            // });
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
           });
       })
       .catch((error) => {
@@ -210,132 +211,134 @@ router.get(
   }
 );
 
-// Update a Project
-// router.put(
-//   "/:id",
-//   passport.authenticate("jwt", {
-//     session: false,
-//   }),
-//   upload.single("ProjectAttach"),
-//   function (req, res) {
-//     helper
-//       .checkPermission(req.user.role_id, "project_update")
-//       .then((rolePerm) => {
-//         if (
-//           !req.params.id ||
-//           !req.body.user_added_id ||
-//           !req.body.proj_title ||
-//           !req.body.proj_description ||
-//           !req.body.category_id ||
-//           !req.body.price_range_id ||
-//           !req.body.proj_period
-//         ) {
-//           res.status(400).send({
-//             msg: "Please pass ID and required fields.",
-//           });
-//         } else {
-//           Project.findByPk(req.params.id)
-//             .then((project) => {
-//               Project.update(
-//                 {
-//                   user_added_id:
-//                     req.body.user_added_id || project.user_added_id,
-//                   proj_title: req.body.proj_title || project.proj_title,
-//                   proj_description:
-//                     req.body.proj_description || project.proj_description,
-//                   category_id: req.body.category_id || project.category_id,
-//                   price_range_id:
-//                     req.body.price_range_id || project.price_range_id,
-//                   proj_period: req.body.proj_period || project.proj_period,
-//                   attachment_file: req.file?.path || project.attachment_file,
-//                   proj_status_id:
-//                     req.body.proj_status_id || project.proj_status_id,
-//                 },
-//                 {
-//                   where: {
-//                     id: req.params.id,
-//                   },
-//                 }
-//               )
-//                 .then((_) => {
-//                   res.status(200).send({
-//                     msg: "Resourse updated",
-//                   });
-//                 })
-//                 .catch((err) =>
-//                   res.status(400).send({
-//                     success: false,
-//                     msg: err,
-//                   })
-//                 );
-//             })
-//             .catch((error) => {
-//               res.status(400).send({
-//                 success: false,
-//                 msg: error,
-//               });
-//             });
-//         }
-//       })
-//       .catch((error) => {
-//         res.status(403).send({
-//           success: false,
-//           msg: error,
-//         });
-//       });
-//   }
-// );
+// update offer status
+router.put(
+  "/project/status/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "update_offer_status")
+      .then((rolePerm) => {
+        if (
+          !req.params.id ||
+          !req.body.projstatus ||
+          !req.body.offerstatus ||
+          !req.body.proj_id
+        ) {
+          res.status(400).send({
+            msg: "missing fields please add required info.",
+          });
+        } else {
+          if (offerstatus) {
+            sequelize
+              .transaction((t) => {
+                // chain all your queries here. make sure you return them.
+                return ProjStatus.findOne(
+                  {
+                    where: {
+                      stat_name: req.body.projstatus,
+                    },
+                  },
+                  { transaction: t }
+                )
+                  .then((stat) => {
+                    return Project.update(
+                      {
+                        proj_status_id: stat.id,
+                      },
+                      {
+                        where: {
+                          id: req.body.proj_id,
+                        },
+                      },
+                      { transaction: t }
+                    );
+                  })
+                  .then((_) => {
+                    return ProjectOffer.update(
+                      {
+                        accept_status: offerstatus,
+                      },
+                      {
+                        where: {
+                          id: req.params.id,
+                        },
+                      },
+                      { transaction: t }
+                    );
+                  });
+              })
+              .then((_) => {
+                // Transaction has been committed
+                // result is whatever the result of the promise chain returned to the transaction callback
+                res.status(200).send({
+                  msg: "Resourse updated",
+                });
+              })
+              .catch((err) => {
+                // Transaction has been rolled back
+                // err is whatever rejected the promise chain returned to the transaction callback
+                res.status(500).send({
+                  msg: err,
+                });
+              });
+          } else {
+            ProjectOffer.update(
+              {
+                accept_status: offerstatus,
+              },
+              {
+                where: {
+                  id: req.params.id,
+                },
+              }
+            )
+              .then((_) => {
+                res.status(200).send({
+                  msg: "Resourse updated",
+                });
+              })
+              .catch((err) =>
+                res.status(500).send({
+                  success: false,
+                  msg: err,
+                })
+              );
+          }
+        }
+      })
+      .catch((error) => {
+        // console.log(error);
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
 
-// // Delete a Project
-// router.delete(
-//   "/:id",
-//   passport.authenticate("jwt", {
-//     session: false,
-//   }),
-//   function (req, res) {
-//     helper
-//       .checkPermission(req.user.role_id, "project_delete")
-//       .then((rolePerm) => {
-//         if (!req.params.id) {
-//           res.status(400).send({
-//             msg: "Please pass resourse ID.",
-//           });
-//         } else {
-//           Project.findByPk(req.params.id)
-//             .then((role) => {
-//               if (role) {
-//                 Project.destroy({
-//                   where: {
-//                     id: req.params.id,
-//                   },
-//                 })
-//                   .then((_) => {
-//                     res.status(200).send({
-//                       msg: "Resourse deleted",
-//                     });
-//                   })
-//                   .catch((err) => res.status(400).send({msg: err}));
-//               } else {
-//                 res.status(404).send({
-//                   msg: "Resourse not found",
-//                 });
-//               }
-//             })
-//             .catch((error) => {
-//               res.status(400).send({
-//                 success: false,
-//                 msg: error,
-//               });
-//             });
-//         }
-//       })
-//       .catch((error) => {
-//         res.status(403).send({
-//           success: false,
-//           msg: error,
+// refrence of transaction with promises
+// var members = req.body.members;
+//     models.sequelize.transaction(function (t) {
+//         var promises = []
+//         for (var i = 0; i < members.length; i++) {
+//             var newPromise = models.User.create({'firstname':members[i], 'email':members[i], 'pending':true}, {transaction: t});
+//            promises.push(newPromise);
+//         };
+//         return Promise.all(promises).then(function(users) {
+//             var userPromises = [];
+//             for (var i = 0; i < users.length; i++) {
+//                 userPromises.push(users[i].addInvitations([group], {transaction: t});
+//             }
+//             return Promise.all(userPromises);
 //         });
-//       });
-//   }
-// );
+//     }).then(function (result) {
+//         console.log("YAY");
+//     }).catch(function (err) {
+//         console.log("NO!!!");
+//         return next(err);
+//     });
 
 module.exports = router;

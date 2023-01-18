@@ -60,6 +60,10 @@ module.exports = (sequelize, DataTypes) => {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
       },
+      accept_status: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+      },
     },
     // {
     //   indexes: [
