@@ -7,7 +7,7 @@ const Helper = require("../utils/helper");
 const helper = new Helper();
 const { sendResetPassword } = require("../utils/advanceMailer");
 const bcrypt = require("bcryptjs");
-
+// password recovery by email
 router.post("/", function (req, res) {
   if (!req.body.email) {
     res.status(400).send({
@@ -43,6 +43,7 @@ router.post("/", function (req, res) {
   }
 });
 
+// user reset password
 router.post("/user", function (req, res) {
   if (!req.body.userId || !req.body.resetId || !req.body.password) {
     res.status(400).send({
