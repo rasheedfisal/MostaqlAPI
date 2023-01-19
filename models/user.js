@@ -53,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "talent_id",
         as: "talentreview",
       });
+      User.hasOne(models.ResetPassword, {
+        foreignKey: "user_id",
+        as: "resetuser",
+      });
       //User.hasOne(models.Role);
     }
   }

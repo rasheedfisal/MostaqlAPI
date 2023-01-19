@@ -66,4 +66,40 @@ module.exports = {
       console.error(error);
     }
   },
+
+  sendResetPassword: async (req, user, reset_key) => {
+    try {
+      const fullPath = `${req.protocol}://${req.hostname}/reset/${user.id}/${reset_key}`;
+      var today = new Date();
+      var date =
+        today.getFullYear() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getDate();
+      var time =
+        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+      var dateTime = date + " " + time;
+
+      var variables = {
+        fullname: user.fullname,
+        link: fullPath,
+        time: dateTime,
+      };
+      const { html, text, subject } = await templates.render(
+        "resetPassword.html",
+        variables
+      );
+      var emailInfo = {
+        from: process.env.MAILING_EMAIL,
+        to: user.email,
+        subject: "Reset Password",
+        text: text,
+        html: html,
+      };
+      emailProcessor.sendMail(emailInfo);
+    } catch (error) {
+      console.error(error);
+    }
+  },
 };

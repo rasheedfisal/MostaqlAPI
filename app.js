@@ -22,6 +22,7 @@ var ConversationsRouter = require("./routes/conversations");
 var CommissionsRouter = require("./routes/commissionrate");
 var CommonQuestionsRouter = require("./routes/commonquestions");
 var UserReviewsRouter = require("./routes/userreviews");
+var ResetPasswordRouter = require("./routes/resetpassword");
 
 var app = express();
 
@@ -42,6 +43,7 @@ const apiV1 = "/api/v1";
 
 app.use("/", indexRouter);
 app.use(`${apiV1}/auth`, authRouter);
+app.use(`${apiV1}/reset`, ResetPasswordRouter);
 
 app.use(verifyJWT);
 
