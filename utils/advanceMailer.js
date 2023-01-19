@@ -98,6 +98,7 @@ module.exports = {
         html: html,
       };
       emailProcessor.sendMail(emailInfo);
+      console.log("message sent");
     } catch (error) {
       console.error(error);
     }
