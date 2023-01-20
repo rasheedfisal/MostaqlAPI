@@ -30,6 +30,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "proj_id",
         as: "review_project",
       });
+      Project.hasMany(models.ProjectCloseRequest, {
+        foreignKey: "proj_id",
+        as: "closeRequest",
+      });
     }
   }
   Project.init(

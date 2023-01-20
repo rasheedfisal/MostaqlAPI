@@ -57,6 +57,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "resetuser",
       });
+      User.hasMany(models.SupportBox, {
+        foreignKey: "user_id",
+        as: "Support",
+      });
+      User.hasMany(models.Notification, {
+        foreignKey: "sender_id",
+        as: "userNotification",
+      });
       //User.hasOne(models.Role);
     }
   }

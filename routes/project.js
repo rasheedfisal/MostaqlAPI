@@ -11,6 +11,7 @@ const {
   UserProfile,
   SubCategories,
   UserCredentials,
+  sequelize,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -844,4 +845,67 @@ router.get(
   }
 );
 
+// send close request
+router.post(
+  "/request/close/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "update_offer_status")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "missing fields please add required info.",
+          });
+        } else {
+          sequelize
+            .transaction((t) => {
+              // chain all your queries here. make sure you return them.
+              return ProjStatus.findOne(
+                {
+                  where: {
+                    stat_name: "Completed",
+                  },
+                },
+                { transaction: t }
+              ).then((stat) => {
+                return Project.update(
+                  {
+                    proj_status_id: stat.id,
+                  },
+                  {
+                    where: {
+                      id: req.params.id,
+                    },
+                  },
+                  { transaction: t }
+                );
+              });
+            })
+            .then((_) => {
+              // Transaction has been committed
+              // result is whatever the result of the promise chain returned to the transaction callback
+              res.status(200).send({
+                msg: "Resourse updated",
+              });
+            })
+            .catch((err) => {
+              // Transaction has been rolled back
+              // err is whatever rejected the promise chain returned to the transaction callback
+              res.status(500).send({
+                msg: err,
+              });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
 module.exports = router;

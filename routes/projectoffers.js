@@ -211,9 +211,9 @@ router.get(
   }
 );
 
-// update offer status
+// update offer inprogress status
 router.put(
-  "/project/status/:id",
+  "/project/inprogress/:id",
   passport.authenticate("jwt", {
     session: false,
   }),
@@ -221,92 +221,140 @@ router.put(
     helper
       .checkPermission(req.user.role_id, "update_offer_status")
       .then((rolePerm) => {
-        if (
-          !req.params.id ||
-          !req.body.projstatus ||
-          !req.body.offerstatus ||
-          !req.body.proj_id
-        ) {
+        if (!req.params.id || !req.body.proj_id) {
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
         } else {
-          if (req.body.offerstatus) {
-            sequelize
-              .transaction((t) => {
-                // chain all your queries here. make sure you return them.
-                return ProjStatus.findOne(
+          sequelize
+            .transaction((t) => {
+              // chain all your queries here. make sure you return them.
+              return ProjStatus.findOne(
+                {
+                  where: {
+                    stat_name: "In-Progress",
+                  },
+                },
+                { transaction: t }
+              )
+                .then((stat) => {
+                  return Project.update(
+                    {
+                      proj_status_id: stat.id,
+                    },
+                    {
+                      where: {
+                        id: req.body.proj_id,
+                      },
+                    },
+                    { transaction: t }
+                  );
+                })
+                .then((_) => {
+                  return ProjectOffer.update(
+                    {
+                      accept_status: true,
+                    },
+                    {
+                      where: {
+                        id: req.params.id,
+                      },
+                    },
+                    { transaction: t }
+                  );
+                })
+                .then((_) => {
+                  return ProjectOffer.update(
+                    {
+                      accept_status: false,
+                    },
+                    {
+                      where: {
+                        proj_id: req.body.proj_id,
+                        accept_status: null,
+                      },
+                    },
+                    { transaction: t }
+                  );
+                });
+            })
+            .then((_) => {
+              // Transaction has been committed
+              // result is whatever the result of the promise chain returned to the transaction callback
+              res.status(200).send({
+                msg: "Resourse updated",
+              });
+            })
+            .catch((err) => {
+              // Transaction has been rolled back
+              // err is whatever rejected the promise chain returned to the transaction callback
+              res.status(500).send({
+                msg: err,
+              });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+// update offer complete status
+router.put(
+  "/project/complete/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "update_offer_status")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "missing fields please add required info.",
+          });
+        } else {
+          sequelize
+            .transaction((t) => {
+              // chain all your queries here. make sure you return them.
+              return ProjStatus.findOne(
+                {
+                  where: {
+                    stat_name: "Completed",
+                  },
+                },
+                { transaction: t }
+              ).then((stat) => {
+                return Project.update(
+                  {
+                    proj_status_id: stat.id,
+                  },
                   {
                     where: {
-                      stat_name: req.body.projstatus,
+                      id: req.params.id,
                     },
                   },
                   { transaction: t }
-                )
-                  .then((stat) => {
-                    return Project.update(
-                      {
-                        proj_status_id: stat.id,
-                      },
-                      {
-                        where: {
-                          id: req.body.proj_id,
-                        },
-                      },
-                      { transaction: t }
-                    );
-                  })
-                  .then((_) => {
-                    return ProjectOffer.update(
-                      {
-                        accept_status: req.body.offerstatus,
-                      },
-                      {
-                        where: {
-                          id: req.params.id,
-                        },
-                      },
-                      { transaction: t }
-                    );
-                  });
-              })
-              .then((_) => {
-                // Transaction has been committed
-                // result is whatever the result of the promise chain returned to the transaction callback
-                res.status(200).send({
-                  msg: "Resourse updated",
-                });
-              })
-              .catch((err) => {
-                // Transaction has been rolled back
-                // err is whatever rejected the promise chain returned to the transaction callback
-                res.status(500).send({
-                  msg: err,
-                });
+                );
               });
-          } else {
-            ProjectOffer.update(
-              {
-                accept_status: offerstatus,
-              },
-              {
-                where: {
-                  id: req.params.id,
-                },
-              }
-            )
-              .then((_) => {
-                res.status(200).send({
-                  msg: "Resourse updated",
-                });
-              })
-              .catch((err) =>
-                res.status(500).send({
-                  success: false,
-                  msg: err,
-                })
-              );
-          }
+            })
+            .then((_) => {
+              // Transaction has been committed
+              // result is whatever the result of the promise chain returned to the transaction callback
+              res.status(200).send({
+                msg: "Resourse updated",
+              });
+            })
+            .catch((err) => {
+              // Transaction has been rolled back
+              // err is whatever rejected the promise chain returned to the transaction callback
+              res.status(500).send({
+                msg: err,
+              });
+            });
         }
       })
       .catch((error) => {
