@@ -14,32 +14,35 @@ router.post("/", function (req, res) {
       msg: "missing fields please add required info.",
     });
   } else {
-    User.findOne({
-      where: {
-        email: req.body.email,
-      },
-    })
-      .then((user) => {
-        if (!user) {
-          res.status(404).send({ msg: "User Not Found" });
-        }
-        ResetPassword.create({
-          user_id: user.id,
-        })
-          .then((reset) => {
-            sendResetPassword(req, user, reset.reset_key)
-              .then((_) => {
-                return res
-                  .status(200)
-                  .send({ msg: "Email Was Sent To Your Account" });
-              })
-              .catch((err) => {
-                return res.status(500).send({ msg: err });
-              });
-          })
-          .catch((err) => res.status(500).send({ msg: err }));
-      })
-      .catch((err) => res.status(500).send({ msg: err }));
+    res.status(400).send({
+      path: req.path,
+    });
+    // User.findOne({
+    //   where: {
+    //     email: req.body.email,
+    //   },
+    // })
+    //   .then((user) => {
+    //     if (!user) {
+    //       res.status(404).send({ msg: "User Not Found" });
+    //     }
+    //     ResetPassword.create({
+    //       user_id: user.id,
+    //     })
+    //       .then((reset) => {
+    //         sendResetPassword(req, user, reset.reset_key)
+    //           .then((_) => {
+    //             return res
+    //               .status(200)
+    //               .send({ msg: "Email Was Sent To Your Account" });
+    //           })
+    //           .catch((err) => {
+    //             return res.status(500).send({ msg: err });
+    //           });
+    //       })
+    //       .catch((err) => res.status(500).send({ msg: err }));
+    //   })
+    //   .catch((err) => res.status(500).send({ msg: err }));
   }
 });
 
