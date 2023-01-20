@@ -69,7 +69,7 @@ module.exports = {
 
   sendResetPassword: async (req, user, reset_key) => {
     try {
-      const fullPath = `${req.protocol}://${req.hostname}/reset/${user.id}/${reset_key}`;
+      const fullPath = `${req.headers?.referer}reset/${user.id}/${reset_key}`;
       var today = new Date();
       var date =
         today.getFullYear() +
