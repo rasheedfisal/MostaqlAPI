@@ -25,6 +25,7 @@ var UserReviewsRouter = require("./routes/userreviews");
 var ResetPasswordRouter = require("./routes/resetpassword");
 var SiteInfoRouter = require("./routes/siteinfo");
 var SiteInfoAdminRouter = require("./routes/siteinfoadmin");
+var PaymentsRouter = require("./routes/payments");
 
 var app = express();
 
@@ -63,6 +64,7 @@ app.use(`${apiV1}/rate`, CommissionsRouter);
 app.use(`${apiV1}/questions`, CommonQuestionsRouter);
 app.use(`${apiV1}/reviews`, UserReviewsRouter);
 app.use(`${apiV1}/siteadmin`, SiteInfoAdminRouter);
+app.use(`${apiV1}/payments`, PaymentsRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

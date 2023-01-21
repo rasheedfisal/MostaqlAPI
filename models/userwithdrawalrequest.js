@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       UserWithdrawalRequest.belongsTo(models.User, {
         foreignKey: "user_id",
-        as: "User",
       });
       UserWithdrawalRequest.hasMany(models.UserCreditCardRequest, {
         foreignKey: "withdraw_id",
@@ -45,7 +44,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       attachment: {
         type: DataTypes.STRING,
-        allowNull: false,
       },
       type: {
         type: DataTypes.STRING,

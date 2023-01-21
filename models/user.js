@@ -10,6 +10,11 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
+      User.belongsToMany(models.Notification, {
+        through: "ReadNotification",
+        as: "notificationReceivers",
+        foreignKey: "receiver_id",
+      });
       User.hasMany(models.Project, {
         foreignKey: "user_added_id",
         as: "projects",

@@ -1,7 +1,7 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class Notification extends Model {
+  class ReadNotification extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -9,18 +9,9 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Notification.belongsToMany(models.User, {
-        through: "ReadNotification",
-        as: "notifications",
-        foreignKey: "notification_id",
-      });
-      Notification.belongsTo(models.User, {
-        foreignKey: "sender_id",
-        as: "Users",
-      });
     }
   }
-  Notification.init(
+  ReadNotification.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -28,28 +19,26 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      description: {
-        type: DataTypes.TEXT("long"),
-        allowNull: false,
-      },
-      type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      sender_id: {
+      notification_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      receiver_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: "Notification",
+      modelName: "ReadNotification",
     }
   );
-  return Notification;
+  return ReadNotification;
 };

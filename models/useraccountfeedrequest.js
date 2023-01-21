@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       UserAccountFeedRequest.belongsTo(models.User, {
         foreignKey: "user_id",
-        as: "user",
       });
     }
   }
@@ -34,7 +33,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       attachment: {
         type: DataTypes.STRING,
-        allowNull: false,
       },
       accepted: DataTypes.BOOLEAN,
     },
