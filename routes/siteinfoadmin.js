@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   ContactUs,
-  PaypallSetting,
+  PaypalSetting,
   PrivacyPolicy,
   WithdrawableAmountSetting,
 } = require("../models");
@@ -26,7 +26,7 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          PaypallSetting.upsert({
+          PaypalSetting.upsert({
             email: req.body.email,
           })
             .then(([item, created]) =>
@@ -41,6 +41,7 @@ router.post(
         }
       })
       .catch((error) => {
+        console.log(error);
         res.status(403).send({
           success: false,
           msg: error,

@@ -2,14 +2,14 @@ const express = require("express");
 const router = express.Router();
 const {
   ContactUs,
-  PaypallSetting,
+  PaypalSetting,
   PrivacyPolicy,
   WithdrawableAmountSetting,
 } = require("../models");
 
 /////// paypal /////////
 router.get("/paypal", function (req, res) {
-  PaypallSetting.findOne()
+  PaypalSetting.findOne()
     .then((item) => res.status(200).send(item))
     .catch((error) => {
       res.status(500).send({
