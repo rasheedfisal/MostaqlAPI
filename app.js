@@ -23,6 +23,8 @@ var CommissionsRouter = require("./routes/commissionrate");
 var CommonQuestionsRouter = require("./routes/commonquestions");
 var UserReviewsRouter = require("./routes/userreviews");
 var ResetPasswordRouter = require("./routes/resetpassword");
+var SiteInfoRouter = require("./routes/siteinfo");
+var SiteInfoAdminRouter = require("./routes/siteinfoadmin");
 
 var app = express();
 
@@ -44,6 +46,7 @@ const apiV1 = "/api/v1";
 app.use("/", indexRouter);
 app.use(`${apiV1}/auth`, authRouter);
 app.use(`${apiV1}/reset`, ResetPasswordRouter);
+app.use(`${apiV1}/site`, SiteInfoRouter);
 
 app.use(verifyJWT);
 
@@ -59,6 +62,7 @@ app.use(`${apiV1}/conversations`, ConversationsRouter);
 app.use(`${apiV1}/rate`, CommissionsRouter);
 app.use(`${apiV1}/questions`, CommonQuestionsRouter);
 app.use(`${apiV1}/reviews`, UserReviewsRouter);
+app.use(`${apiV1}/siteadmin`, SiteInfoAdminRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

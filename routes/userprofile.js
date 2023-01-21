@@ -14,7 +14,6 @@ const helper = new Helper();
 const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const multer = require("multer");
-const Sequelize = require("sequelize");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
