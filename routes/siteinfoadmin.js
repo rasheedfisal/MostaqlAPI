@@ -26,12 +26,21 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          PaypalSetting.upsert({
-            email: req.body.email,
+          PaypalSetting.destroy({
+            where: {},
           })
-            .then(([item, created]) =>
-              res.status(200).send({ msg: "Resourse updated" })
-            )
+            .then((_) => {
+              PaypalSetting.create({
+                email: req.body.email,
+              })
+                .then((_) => res.status(200).send({ msg: "Resourse updated" }))
+                .catch((error) =>
+                  res.status(500).send({
+                    success: false,
+                    msg: error,
+                  })
+                );
+            })
             .catch((error) => {
               res.status(500).send({
                 success: false,
@@ -65,12 +74,21 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          PrivacyPolicy.upsert({
-            description: req.body.description,
+          PrivacyPolicy.destroy({
+            where: {},
           })
-            .then(([item, created]) =>
-              res.status(200).send({ msg: "Resourse updated" })
-            )
+            .then((_) => {
+              PrivacyPolicy.create({
+                description: req.body.description,
+              })
+                .then((_) => res.status(200).send({ msg: "Resourse updated" }))
+                .catch((error) =>
+                  res.status(500).send({
+                    success: false,
+                    msg: error,
+                  })
+                );
+            })
             .catch((error) => {
               res.status(500).send({
                 success: false,
@@ -103,12 +121,21 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          WithdrawableAmountSetting.upsert({
-            amount: req.body.amount,
+          WithdrawableAmountSetting.destroy({
+            where: {},
           })
-            .then(([item, created]) =>
-              res.status(200).send({ msg: "Resourse updated" })
-            )
+            .then((_) => {
+              WithdrawableAmountSetting.create({
+                amount: req.body.amount,
+              })
+                .then((_) => res.status(200).send({ msg: "Resourse updated" }))
+                .then((error) =>
+                  res.status(500).send({
+                    success: false,
+                    msg: error,
+                  })
+                );
+            })
             .catch((error) => {
               res.status(500).send({
                 success: false,
@@ -136,14 +163,23 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "contactus_setting")
       .then((rolePerm) => {
-        ContactUs.upsert({
-          website_link: req.body.website_link,
-          phone: req.body.phone,
-          email: req.body.email,
+        ContactUs.destroy({
+          where: {},
         })
-          .then(([item, created]) =>
-            res.status(200).send({ msg: "Resourse updated" })
-          )
+          .then((_) => {
+            ContactUs.create({
+              website_link: req.body.website_link,
+              phone: req.body.phone,
+              email: req.body.email,
+            })
+              .then((_) => res.status(200).send({ msg: "Resourse updated" }))
+              .catch((err) =>
+                res.status(500).send({
+                  success: false,
+                  msg: err,
+                })
+              );
+          })
           .catch((error) => {
             res.status(500).send({
               success: false,
