@@ -65,6 +65,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "sender_id",
         as: "userNotification",
       });
+      User.hasMany(models.UserWithdrawalRequest, {
+        foreignKey: "user_id",
+        as: "withdrawals",
+      });
       //User.hasOne(models.Role);
     }
   }
