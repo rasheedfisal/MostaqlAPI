@@ -1,7 +1,7 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class UserWithdrawalRequest extends Model {
+  class UserAccountFeedRequest extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -9,21 +9,13 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      UserWithdrawalRequest.belongsTo(models.User, {
+      UserAccountFeedRequest.belongsTo(models.User, {
         foreignKey: "user_id",
-        as: "User",
-      });
-      UserWithdrawalRequest.hasMany(models.UserCreditCardRequest, {
-        foreignKey: "withdraw_id",
-        as: "creditcard",
-      });
-      UserWithdrawalRequest.hasMany(models.UserPaypalRequest, {
-        foreignKey: "withdraw_id",
-        as: "paypal",
+        as: "user",
       });
     }
   }
-  UserWithdrawalRequest.init(
+  UserAccountFeedRequest.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -31,31 +23,25 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      amount: {
-        type: DataTypes.DECIMAL,
-        allowNull: false,
-      },
       user_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
-      accepted: {
-        type: DataTypes.BOOLEAN,
+      amount: {
+        type: DataTypes.DECIMAL,
+        allowNull: false,
       },
       attachment: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
+      accepted: DataTypes.BOOLEAN,
     },
     {
       sequelize,
-      modelName: "UserWithdrawalRequest",
+      modelName: "UserAccountFeedRequest",
     }
   );
-  return UserWithdrawalRequest;
+  return UserAccountFeedRequest;
 };

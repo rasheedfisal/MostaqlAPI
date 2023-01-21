@@ -1,7 +1,7 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class UserWithdrawalRequest extends Model {
+  class UserCreditCardRequest extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -9,21 +9,12 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      UserWithdrawalRequest.belongsTo(models.User, {
-        foreignKey: "user_id",
-        as: "User",
-      });
-      UserWithdrawalRequest.hasMany(models.UserCreditCardRequest, {
+      UserCreditCardRequest.belongsTo(models.UserWithdrawalRequest, {
         foreignKey: "withdraw_id",
-        as: "creditcard",
-      });
-      UserWithdrawalRequest.hasMany(models.UserPaypalRequest, {
-        foreignKey: "withdraw_id",
-        as: "paypal",
       });
     }
   }
-  UserWithdrawalRequest.init(
+  UserCreditCardRequest.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -31,31 +22,32 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      amount: {
-        type: DataTypes.DECIMAL,
-        allowNull: false,
-      },
-      user_id: {
+      withdraw_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
-      accepted: {
-        type: DataTypes.BOOLEAN,
-      },
-      attachment: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      type: {
+      card_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      expiration: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      security_code: {
         type: DataTypes.STRING,
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: "UserWithdrawalRequest",
+      modelName: "UserCreditCardRequest",
     }
   );
-  return UserWithdrawalRequest;
+  return UserCreditCardRequest;
 };

@@ -69,6 +69,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "withdrawals",
       });
+      User.hasMany(models.UserWallet, {
+        foreignKey: "user_id",
+        as: "wallet",
+      });
+      User.hasMany(models.UserAccountFeedRequest, {
+        foreignKey: "user_id",
+        as: "accountfeed",
+      });
       //User.hasOne(models.Role);
     }
   }
