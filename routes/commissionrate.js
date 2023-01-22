@@ -5,6 +5,7 @@ const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
+const { getPagination, getPagingData } = require("../utils/pagination");
 
 // Create a Commssion Rate
 router.post(
@@ -55,14 +56,21 @@ router.get(
     session: false,
   }),
   function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "commission_rate_get_all")
       .then((rolePerm) => {
         // console.log(rolePerm);
-        CommissionRate.findAll({
+        CommissionRate.findAndCountAll({
+          limit,
+          offset,
+          distinct: true,
           order: [["createdAt", "DESC"]],
         })
-          .then((rates) => res.status(200).send(rates))
+          .then((rates) =>
+            res.status(200).send(getPagingData(rates, page, limit))
+          )
           .catch((error) => {
             res.status(400).send({
               success: false,
@@ -122,7 +130,12 @@ router.put(
           CommissionRate.findByPk(req.params.id)
             .then((rate) => {
               if (req.body.iscurrent) {
-                CommissionRate.update({ iscurrent: false })
+                CommissionRate.update(
+                  { iscurrent: false },
+                  {
+                    where: {},
+                  }
+                )
                   .then((_) => console.log("updated"))
                   .catch((err) => console.log(err));
               }

@@ -641,7 +641,7 @@ router.post(
     session: false,
   }),
   function (req, res) {
-    const { page, size } = req.query;
+    const { page, size, query } = req.query;
     const { limit, offset } = getPagination(page, size);
     helper
       .checkPermission(req.user.role_id, "user_get_all")
@@ -672,7 +672,13 @@ router.post(
           distinct: true,
           order: [["fullname", "ASC"]],
           where: {
-            [Op.not]: [{ id: req.user?.id }],
+            // [Op.not]: [{ id: req.user?.id }],
+            fullname: {
+              [Op.like]: `%${query}%`,
+            },
+            id: {
+              [Op.not]: req.user?.id,
+            },
           },
         })
           .then((users) =>

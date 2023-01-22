@@ -95,6 +95,11 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_add', 'Request Account Feed', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_get_all', 'Get All Account Feed Requests', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_get', 'Get User Acount Feed Requests', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_approve_reject', 'Approve Or Reject Account Feeding Request', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_request_account_add', 'Request Money Withdrawal', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_request_get_all', 'Get All Withdrawal Requests', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_request_get', 'Get User Withdrawal Requests', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_request_approve_reject', 'Approve Or Reject Withdrawal Request', now(), now());
 
 
 -------------------Can Access Dasboard-------------------
