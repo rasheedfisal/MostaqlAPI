@@ -32,7 +32,11 @@ module.exports = (sequelize, DataTypes) => {
       });
       Project.hasMany(models.ProjectCloseRequest, {
         foreignKey: "proj_id",
-        as: "closeRequest",
+        as: "closeProjectRequest",
+      });
+      Project.hasMany(models.ProjectCompletedRequest, {
+        foreignKey: "proj_id",
+        as: "completedProjectRequest",
       });
     }
   }

@@ -82,6 +82,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "accountfeed",
       });
+
       //User.hasOne(models.Role);
     }
   }

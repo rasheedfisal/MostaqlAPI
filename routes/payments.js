@@ -22,6 +22,7 @@ const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const { sendNotification } = require("../utils/advanceNotifier");
+const { isUserHaveMinimumAmount } = require("../utils/commissions");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -136,7 +137,7 @@ router.post(
             })
             .then((_) => {
               res.status(201).send({
-                msg: "Resourse created Succefully",
+                msg: "Resourse created Successfully",
               });
             })
             .catch((err) => {
@@ -274,6 +275,7 @@ router.put(
             .then((request) => {
               if (request) {
                 let reqUser = {};
+                let notifiyUser = {};
                 sequelize
                   .transaction((t) => {
                     // chain all your queries here. make sure you return them.
@@ -317,6 +319,7 @@ router.put(
                         );
                       })
                       .then((notify) => {
+                        notifiyUser = notify;
                         return ReadNotification.create(
                           {
                             notification_id: notify.id,
@@ -327,12 +330,23 @@ router.put(
                       });
                   })
                   .then((_) => {
-                    res.status(201).send({
-                      msg: "Resourse created Succefully",
-                    });
+                    sendNotification(
+                      notifiyUser.title,
+                      notifiyUser.description,
+                      "test"
+                    )
+                      .then((_) => {
+                        res.status(201).send({
+                          msg: "Resourse created Successfully",
+                        });
+                      })
+                      .catch((_) => {
+                        res.status(500).send({
+                          msg: "the status has changed but the notification was not sent please resend from the notification page",
+                        });
+                      });
                   })
                   .catch((err) => {
-                    console.log(err);
                     res.status(500).send({
                       msg: err,
                     });
@@ -372,78 +386,92 @@ router.post(
             msg: "Please pass Role ID, email, password, phone or fullname.",
           });
         } else {
-          let notify = {};
-          sequelize
-            .transaction((t) => {
-              // chain all your queries here. make sure you return them.
-              return UserWithdrawalRequest.create(
-                {
-                  amount: req.body.amount,
-                  user_id: req.user.id,
-                  attachment: req.file?.path,
-                  type: "paypal",
-                },
-                { transaction: t }
-              )
-                .then((request) => {
-                  return UserPaypalRequest.create(
-                    {
-                      withdraw_id: request.id,
-                      email: req.body.email,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((paypal) => {
-                  return Notification.create(
-                    {
-                      title: "Paypal Withdrawal Request",
-                      description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
-                      type: "admin-to-user",
-                      sender_id: req.user.id,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((notification) => {
-                  notify = notification;
-                  return sequelize.query(
-                    "select id from users where role_id in(select a.id from roles as a " +
-                      "inner join rolepermissions as ro on a.id = ro.role_id " +
-                      "inner join permissions as p on ro.perm_id = p.id " +
-                      "where p.perm_name = 'can_access_dashboard')",
-                    {
-                      type: QueryTypes.SELECT,
-                      model: User,
-                      mapToModel: true,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((users) => {
-                  var promises = [];
-                  users.map((a) => {
-                    var newPromise = ReadNotification.create(
+          isUserHaveMinimumAmount()
+            .then((isTrue) => {
+              if (!isTrue) {
+                res.status(400).send({
+                  msg: "User Doesn't have Sufficient Credit",
+                });
+              } else {
+                let notify = {};
+                sequelize
+                  .transaction((t) => {
+                    // chain all your queries here. make sure you return them.
+                    return UserWithdrawalRequest.create(
                       {
-                        notification_id: notify.id,
-                        receiver_id: a.id,
+                        amount: req.body.amount,
+                        user_id: req.user.id,
+                        attachment: req.file?.path,
+                        type: "paypal",
                       },
                       { transaction: t }
-                    );
-                    promises.push(newPromise);
+                    )
+                      .then((request) => {
+                        return UserPaypalRequest.create(
+                          {
+                            withdraw_id: request.id,
+                            email: req.body.email,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((paypal) => {
+                        return Notification.create(
+                          {
+                            title: "Paypal Withdrawal Request",
+                            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
+                            type: "admin-to-user",
+                            sender_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((notification) => {
+                        notify = notification;
+                        return sequelize.query(
+                          "select id from users where role_id in(select a.id from roles as a " +
+                            "inner join rolepermissions as ro on a.id = ro.role_id " +
+                            "inner join permissions as p on ro.perm_id = p.id " +
+                            "where p.perm_name = 'can_access_dashboard')",
+                          {
+                            type: QueryTypes.SELECT,
+                            model: User,
+                            mapToModel: true,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((users) => {
+                        var promises = [];
+                        users.map((a) => {
+                          var newPromise = ReadNotification.create(
+                            {
+                              notification_id: notify.id,
+                              receiver_id: a.id,
+                            },
+                            { transaction: t }
+                          );
+                          promises.push(newPromise);
+                        });
+                        return Promise.all(promises);
+                      });
+                  })
+                  .then((_) => {
+                    res.status(201).send({
+                      msg: "Resourse created Successfully",
+                    });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.status(500).send({
+                      msg: err,
+                    });
                   });
-                  return Promise.all(promises);
-                });
+              }
             })
-            .then((_) => {
-              res.status(201).send({
-                msg: "Resourse created Succefully",
-              });
-            })
-            .catch((err) => {
-              console.log(err);
-              res.status(500).send({
-                msg: err,
+            .catch((error) => {
+              res.status(400).send({
+                msg: "Resourse created Successfully",
               });
             });
         }
@@ -476,81 +504,96 @@ router.post(
             msg: "Please pass Role ID, email, password, phone or fullname.",
           });
         } else {
-          let notify = {};
-          sequelize
-            .transaction((t) => {
-              // chain all your queries here. make sure you return them.
-              return UserWithdrawalRequest.create(
-                {
-                  amount: req.body.amount,
-                  user_id: req.user.id,
-                  attachment: req.file?.path,
-                  type: "creditcard",
-                },
-                { transaction: t }
-              )
-                .then((request) => {
-                  return UserCreditCardRequest.create(
-                    {
-                      withdraw_id: request.id,
-                      name: req.body.name,
-                      card_number: req.body.card_number,
-                      expiration: req.body.expiration,
-                      security_code: req.body.security_code,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((paypal) => {
-                  return Notification.create(
-                    {
-                      title: "Credit Card Withdrawal Request",
-                      description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
-                      type: "admin-to-user",
-                      sender_id: req.user.id,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((notification) => {
-                  notify = notification;
-                  return sequelize.query(
-                    "select id from users where role_id in(select a.id from roles as a " +
-                      "inner join rolepermissions as ro on a.id = ro.role_id " +
-                      "inner join permissions as p on ro.perm_id = p.id " +
-                      "where p.perm_name = 'can_access_dashboard')",
-                    {
-                      type: QueryTypes.SELECT,
-                      model: User,
-                      mapToModel: true,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((users) => {
-                  var promises = [];
-                  users.map((a) => {
-                    var newPromise = ReadNotification.create(
+          isUserHaveMinimumAmount()
+            .then((isTrue) => {
+              if (!isTrue) {
+                res.status(400).send({
+                  msg: "User Doesn't have Sufficient Credit",
+                });
+              } else {
+                let notify = {};
+
+                sequelize
+                  .transaction((t) => {
+                    // chain all your queries here. make sure you return them.
+                    return UserWithdrawalRequest.create(
                       {
-                        notification_id: notify.id,
-                        receiver_id: a.id,
+                        amount: req.body.amount,
+                        user_id: req.user.id,
+                        attachment: req.file?.path,
+                        type: "creditcard",
                       },
                       { transaction: t }
-                    );
-                    promises.push(newPromise);
+                    )
+                      .then((request) => {
+                        return UserCreditCardRequest.create(
+                          {
+                            withdraw_id: request.id,
+                            name: req.body.name,
+                            card_number: req.body.card_number,
+                            expiration: req.body.expiration,
+                            security_code: req.body.security_code,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((paypal) => {
+                        return Notification.create(
+                          {
+                            title: "Credit Card Withdrawal Request",
+                            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
+                            type: "admin-to-user",
+                            sender_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((notification) => {
+                        notify = notification;
+                        return sequelize.query(
+                          "select id from users where role_id in(select a.id from roles as a " +
+                            "inner join rolepermissions as ro on a.id = ro.role_id " +
+                            "inner join permissions as p on ro.perm_id = p.id " +
+                            "where p.perm_name = 'can_access_dashboard')",
+                          {
+                            type: QueryTypes.SELECT,
+                            model: User,
+                            mapToModel: true,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((users) => {
+                        var promises = [];
+                        users.map((a) => {
+                          var newPromise = ReadNotification.create(
+                            {
+                              notification_id: notify.id,
+                              receiver_id: a.id,
+                            },
+                            { transaction: t }
+                          );
+                          promises.push(newPromise);
+                        });
+                        return Promise.all(promises);
+                      });
+                  })
+                  .then((_) => {
+                    res.status(201).send({
+                      msg: "Resourse created Successfully",
+                    });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.status(500).send({
+                      msg: err,
+                    });
                   });
-                  return Promise.all(promises);
-                });
+              }
             })
-            .then((_) => {
-              res.status(201).send({
-                msg: "Resourse created Succefully",
-              });
-            })
-            .catch((err) => {
-              console.log(err);
-              res.status(500).send({
-                msg: err,
+            .catch((error) => {
+              res.status(400).send({
+                msg: "Resourse created Successfully",
               });
             });
         }
@@ -700,6 +743,7 @@ router.put(
             .then((request) => {
               if (request) {
                 let reqUser = {};
+                let notifiyUser = {};
                 sequelize
                   .transaction((t) => {
                     // chain all your queries here. make sure you return them.
@@ -743,6 +787,7 @@ router.put(
                         );
                       })
                       .then((notify) => {
+                        notifiyUser = notify;
                         return ReadNotification.create(
                           {
                             notification_id: notify.id,
@@ -753,9 +798,21 @@ router.put(
                       });
                   })
                   .then((_) => {
-                    res.status(201).send({
-                      msg: "Resourse created Succefully",
-                    });
+                    sendNotification(
+                      notifiyUser.title,
+                      notifiyUser.description,
+                      "test"
+                    )
+                      .then((_) => {
+                        res.status(201).send({
+                          msg: "Resourse created Successfully",
+                        });
+                      })
+                      .catch((_) => {
+                        res.status(500).send({
+                          msg: "the status has changed but the notification was not sent please resend from the notification page",
+                        });
+                      });
                   })
                   .catch((err) => {
                     console.log(err);

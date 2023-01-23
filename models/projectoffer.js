@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "rate_id",
         as: "commissionRate",
       });
+      ProjectOffer.hasMany(models.ProjectCompletedRequest, {
+        foreignKey: "offer_id",
+        as: "completedProjectRequests",
+      });
     }
   }
   ProjectOffer.init(

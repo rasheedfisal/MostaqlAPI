@@ -5,7 +5,7 @@ module.exports = {
       cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
       headers: {
         "Content-Type": "application/json",
-        Authorization: process.env.NOTIFICATION_KEY,
+        Authorization: process.env.NOTIFICATION_KEY_Mostaql,
       },
       body: JSON.stringify({
         to: `/topics/${topic}`,

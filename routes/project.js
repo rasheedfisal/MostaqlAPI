@@ -12,17 +12,22 @@ const {
   SubCategories,
   UserCredentials,
   sequelize,
+  ProjectCloseRequest,
+  Notification,
+  ReadNotification,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
 const Sequelize = require("sequelize");
+const { QueryTypes } = require("sequelize");
 const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
 // const { getAllEnginnerEmailList } = require("../utils/findUsers");
 // const { sendToAllEnginners } = require("../utils/advanceMailer");
+const { sendNotification } = require("../utils/advanceNotifier");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -97,33 +102,59 @@ router.post(
                   },
                 })
                   .then((status) => {
-                    Project.create({
-                      user_added_id: req.user?.id,
-                      proj_title: req.body.proj_title,
-                      proj_description: req.body.proj_description,
-                      category_id: req.body.category_id,
-                      price_range_id: req.body.price_range_id,
-                      proj_period: req.body.proj_period,
-                      attatchment_file: req.file?.path,
-                      proj_status_id: status.id,
-                      skills: req.body?.skills,
-                    })
-                      .then((project) => {
-                        // const allEnginner = getAllEnginnerEmailList();
-                        // allEnginner
-                        //   .then((eng) => {
-                        //     sendToAllEnginners(
-                        //       eng.map((a) => a.email),
-                        //       project
-                        //     );
-                        //   })
-                        //   .catch((err) => {
-                        //     console.error(err);
-                        //   });
-                        res.status(201).send(project);
+                    sequelize
+                      .query(
+                        "select count(*) as isOwner from users where role_id in(select a.id from roles as a " +
+                          "inner join rolepermissions as ro on a.id = ro.role_id " +
+                          "inner join permissions as p on ro.perm_id = p.id " +
+                          "where p.perm_name = 'is_project_owner') and id=:uId",
+                        {
+                          replacements: { uId: req.user.id },
+                          type: QueryTypes.SELECT,
+                        }
+                      )
+                      .then((count) => {
+                        if (count[0].isOwner > 0) {
+                          Project.create({
+                            user_added_id: req.user?.id,
+                            proj_title: req.body.proj_title,
+                            proj_description: req.body.proj_description,
+                            category_id: req.body.category_id,
+                            price_range_id: req.body.price_range_id,
+                            proj_period: req.body.proj_period,
+                            attatchment_file: req.file?.path,
+                            proj_status_id: status.id,
+                            skills: req.body?.skills,
+                          })
+                            .then((project) => {
+                              // const allEnginner = getAllEnginnerEmailList();
+                              // allEnginner
+                              //   .then((eng) => {
+                              //     sendToAllEnginners(
+                              //       eng.map((a) => a.email),
+                              //       project
+                              //     );
+                              //   })
+                              //   .catch((err) => {
+                              //     console.error(err);
+                              //   });
+                              res.status(201).send(project);
+                            })
+                            .catch((error) => {
+                              res.status(500).send({
+                                success: false,
+                                msg: error,
+                              });
+                            });
+                        } else {
+                          res.status(400).send({
+                            success: false,
+                            msg: "User is not a project owner",
+                          });
+                        }
                       })
-                      .catch((error) => {
-                        res.status(400).send({
+                      .catch((err) => {
+                        res.status(500).send({
                           success: false,
                           msg: error,
                         });
@@ -229,6 +260,7 @@ router.get(
                   [Op.eq]: stat.id,
                 },
               },
+              order: [["createdAt", "desc"]],
             })
               .then((projects) =>
                 res.status(200).send(getPagingData(projects, page, limit))
@@ -327,6 +359,7 @@ router.get(
               [Op.like]: `%${search}%`,
             },
           },
+          order: [["createdAt", "desc"]],
         })
           .then((projects) =>
             res.status(200).send(getPagingData(projects, page, limit))
@@ -416,6 +449,7 @@ router.get(
           where: {
             category_id: scatid,
           },
+          order: [["createdAt", "desc"]],
         })
           .then((projects) =>
             res.status(200).send(getPagingData(projects, page, limit))
@@ -855,43 +889,83 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "update_offer_status")
       .then((rolePerm) => {
-        if (!req.params.id) {
+        if (!req.params.id || !req.body.reason) {
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
         } else {
+          let notify = {};
           sequelize
             .transaction((t) => {
               // chain all your queries here. make sure you return them.
-              return ProjStatus.findOne(
+              return ProjectCloseRequest.create(
                 {
-                  where: {
-                    stat_name: "Completed",
-                  },
+                  reason: req.body.reason,
+                  proj_id: req.params.id,
                 },
                 { transaction: t }
-              ).then((stat) => {
-                return Project.update(
-                  {
-                    proj_status_id: stat.id,
-                  },
-                  {
-                    where: {
-                      id: req.params.id,
+              )
+                .then((request) => {
+                  return Project.findOne(
+                    {
+                      where: {
+                        id: req.params.id,
+                      },
                     },
-                  },
-                  { transaction: t }
-                );
-              });
+                    { transaction: t }
+                  );
+                })
+                .then((proj) => {
+                  return Notification.create(
+                    {
+                      title: "Project Cancellation Request",
+                      description: `user ${req.user.fullname} is requesting to cancel his project ${proj.proj_title}`,
+                      type: "user-to-admin",
+                      sender_id: req.user.id,
+                    },
+                    { transaction: t }
+                  );
+                })
+                .then((notification) => {
+                  notify = notification;
+                  return sequelize.query(
+                    "select id from users where role_id in(select a.id from roles as a " +
+                      "inner join rolepermissions as ro on a.id = ro.role_id " +
+                      "inner join permissions as p on ro.perm_id = p.id " +
+                      "where p.perm_name = 'can_access_dashboard')",
+                    {
+                      type: QueryTypes.SELECT,
+                      model: User,
+                      mapToModel: true,
+                    },
+                    { transaction: t }
+                  );
+                })
+                .then((users) => {
+                  var promises = [];
+                  users.map((a) => {
+                    var newPromise = ReadNotification.create(
+                      {
+                        notification_id: notify.id,
+                        receiver_id: a.id,
+                      },
+                      { transaction: t }
+                    );
+                    promises.push(newPromise);
+                  });
+                  return Promise.all(promises);
+                });
             })
+
             .then((_) => {
               // Transaction has been committed
               // result is whatever the result of the promise chain returned to the transaction callback
-              res.status(200).send({
-                msg: "Resourse updated",
+              res.status(201).send({
+                msg: "Resourse Created",
               });
             })
             .catch((err) => {
+              console.log(err);
               // Transaction has been rolled back
               // err is whatever rejected the promise chain returned to the transaction callback
               res.status(500).send({
@@ -899,6 +973,246 @@ router.post(
               });
             });
         }
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Approve or Reject Close Request
+router.put(
+  "/close/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "project_cancel_update_status")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "missing fields please add required info.",
+          });
+        } else {
+          ProjectCloseRequest.update(
+            {
+              accepted: true,
+            },
+            {
+              where: {
+                proj_id: req.params.id,
+              },
+            }
+          )
+            .then((_) => {
+              let proj_details = {};
+              let notifiyUser = {};
+              sequelize
+                .transaction((t) => {
+                  // chain all your queries here. make sure you return them.
+                  return ProjStatus.findOne(
+                    {
+                      where: {
+                        stat_name: "Closed",
+                      },
+                    },
+                    { transaction: t }
+                  )
+                    .then((stat) => {
+                      return Project.update(
+                        {
+                          proj_status_id: stat.id,
+                        },
+                        {
+                          where: {
+                            id: req.params.id,
+                          },
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((_) => {
+                      return Project.findOne(
+                        {
+                          include: [
+                            {
+                              model: ProjectOffer,
+                              as: "projectoffers",
+                              include: {
+                                model: User,
+                                as: "client",
+                              },
+                            },
+                            {
+                              model: User,
+                              as: "owner",
+                            },
+                          ],
+                          where: {
+                            id: req.params.id,
+                          },
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((proj) => {
+                      console.log(proj);
+                      proj_details = proj;
+                      return Notification.create(
+                        {
+                          title: "Project Cancelled",
+                          description: `project ${proj.proj_title} was cancelled`,
+                          type: "admin-to-user",
+                          sender_id: req.user.id,
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((notify) => {
+                      notifiyUser = notify;
+
+                      var promises = [];
+                      proj_details.projectoffers.map((a) => {
+                        var newPromise = ReadNotification.create(
+                          {
+                            notification_id: notify.id,
+                            receiver_id: a.user_offered_id,
+                          },
+                          { transaction: t }
+                        );
+                        promises.push(newPromise);
+                      });
+
+                      const ownerPromise = ReadNotification.create(
+                        {
+                          notification_id: notify.id,
+                          receiver_id: proj_details.user_added_id,
+                        },
+                        { transaction: t }
+                      );
+                      promises.push(ownerPromise);
+
+                      return Promise.all(promises);
+                    });
+                })
+                .then((_) => {
+                  proj_details.projectoffers.map((a) => {
+                    sendNotification(
+                      notifiyUser.title,
+                      notifiyUser.description,
+                      "test"
+                    ).then((_) => {
+                      console.log(`message sent ${a.user_offered_id}`);
+                    });
+                  });
+                  sendNotification(
+                    notifiyUser.title,
+                    notifiyUser.description,
+                    "test"
+                  ).then((_) => {
+                    console.log(`message sent ${proj_details.user_added_id}`);
+                  });
+                  // Transaction has been committed
+                  // result is whatever the result of the promise chain returned to the transaction callback
+                  res.status(200).send({
+                    msg: "Resourse updated",
+                  });
+                })
+                .catch((err) => {
+                  // Transaction has been rolled back
+                  // err is whatever rejected the promise chain returned to the transaction callback
+                  console.log(err);
+                  res.status(500).send({
+                    msg: err,
+                  });
+                });
+            })
+            .catch((error) => {});
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get List of close Project requests
+router.get(
+  "/request/close",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size, scatid } = req.query;
+    const { limit, offset } = getPagination(page, size);
+    helper
+      .checkPermission(req.user.role_id, "project_get_all")
+      .then((rolePerm) => {
+        //console.log(rolePerm);
+        ProjectCloseRequest.findAndCountAll({
+          limit,
+          offset,
+          include: {
+            model: Project,
+            as: "ownerProject",
+            attributes: [
+              "id",
+              "proj_title",
+              "proj_description",
+              "skills",
+              "proj_period",
+              "CreatedAt",
+            ],
+            include: [
+              {
+                model: User,
+                as: "owner",
+                attributes: [
+                  "id",
+                  "email",
+                  "fullname",
+                  "phone",
+                  [
+                    Sequelize.fn(
+                      "concat",
+                      req.headers.host,
+                      "/",
+                      Sequelize.col("ownerProject.owner.imgPath")
+                    ),
+                    "avatar",
+                  ],
+                  "is_active",
+                ],
+              },
+              {
+                model: PriceRange,
+                attributes: ["range_name"],
+              },
+              {
+                model: ProjStatus,
+                attributes: ["stat_name"],
+              },
+            ],
+          },
+          distinct: true,
+          order: [["createdAt", "desc"]],
+        })
+          .then((projects) =>
+            res.status(200).send(getPagingData(projects, page, limit))
+          )
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
       })
       .catch((error) => {
         res.status(403).send({
