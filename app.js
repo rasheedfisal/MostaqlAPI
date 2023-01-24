@@ -26,6 +26,7 @@ var ResetPasswordRouter = require("./routes/resetpassword");
 var SiteInfoRouter = require("./routes/siteinfo");
 var SiteInfoAdminRouter = require("./routes/siteinfoadmin");
 var PaymentsRouter = require("./routes/payments");
+var SupportBoxRouter = require("./routes/supportbox");
 
 var app = express();
 
@@ -65,6 +66,7 @@ app.use(`${apiV1}/questions`, CommonQuestionsRouter);
 app.use(`${apiV1}/reviews`, UserReviewsRouter);
 app.use(`${apiV1}/siteadmin`, SiteInfoAdminRouter);
 app.use(`${apiV1}/payments`, PaymentsRouter);
+app.use(`${apiV1}/support`, SupportBoxRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

@@ -6,6 +6,7 @@ const {
   Notification,
   ReadNotification,
   Role,
+  sequelize,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -13,6 +14,8 @@ const Helper = require("../utils/helper");
 const helper = new Helper();
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { getPath } = require("../utils/fileUrl");
+const { sendNotification } = require("../utils/advanceNotifier");
+const { QueryTypes } = require("sequelize");
 
 // Create a new Support Box
 router.post(
@@ -24,7 +27,7 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "support_box_add")
       .then((rolePerm) => {
-        if (!req.body.type || !req.body.description || !req.body.user_id) {
+        if (!req.body.type || !req.body.description) {
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
@@ -44,8 +47,8 @@ router.post(
                 .then((support) => {
                   return Notification.create(
                     {
-                      title: `User ${type}`,
-                      description: `user ${req.user.fullname} has sent a ${type}`,
+                      title: `User ${req.body.type}`,
+                      description: `user ${req.user.fullname} has sent a ${req.body.type}`,
                       type: "user-to-admin",
                       sender_id: req.user.id,
                     },
@@ -83,9 +86,17 @@ router.post(
                 });
             })
             .then((_) => {
-              res.status(201).send({
-                msg: "Resourse created Successfully",
-              });
+              sendNotification(notify.title, notify.description, "test")
+                .then((_) => {
+                  res.status(201).send({
+                    msg: "Resourse updated Successfully",
+                  });
+                })
+                .catch((_) => {
+                  res.status(500).send({
+                    msg: "the status has changed but the notification was not sent please resend from the notification page",
+                  });
+                });
             })
             .catch((err) => {
               console.log(err);
@@ -158,7 +169,7 @@ router.get(
   }
 );
 
-// Get Support by ID
+// Get Support by User ID
 router.get(
   "/user",
   passport.authenticate("jwt", {
@@ -168,7 +179,11 @@ router.get(
     helper
       .checkPermission(req.user.role_id, "support_box_get")
       .then((rolePerm) => {
-        SupportBox.findByPk(req.user.id)
+        SupportBox.findAll({
+          where: {
+            user_id: req.user.id,
+          },
+        })
           .then((supports) => res.status(200).send(supports))
           .catch((error) => {
             res.status(400).send({
@@ -270,6 +285,7 @@ router.put(
                       });
                   })
                   .catch((err) => {
+                    console.log(err);
                     res.status(500).send({
                       msg: err,
                     });
