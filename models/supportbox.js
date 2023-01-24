@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       SupportBox.belongsTo(models.User, {
         foreignKey: "user_id",
-        as: "Users",
       });
     }
   }
@@ -31,6 +30,11 @@ module.exports = (sequelize, DataTypes) => {
       user_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      is_resolved: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
         allowNull: false,
       },
     },
