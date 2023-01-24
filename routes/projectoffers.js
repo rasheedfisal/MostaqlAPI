@@ -11,6 +11,7 @@ const {
   ProjStatus,
   ProjectCompletedRequest,
   Notification,
+  ReadNotification,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -400,6 +401,7 @@ router.put(
         } else {
           let reqUser = {};
           let notifiyUser = {};
+          let userOffer = {};
           sequelize
             .transaction((t) => {
               // chain all your queries here. make sure you return them.
@@ -436,6 +438,7 @@ router.put(
                   );
                 })
                 .then((offer) => {
+                  userOffer = offer;
                   return ProjectCompletedRequest.create(
                     {
                       proj_id: req.params.id,
@@ -449,7 +452,7 @@ router.put(
                   return sequelize.query(
                     "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
                     {
-                      replacements: { reqId: req.params.id },
+                      replacements: { reqId: userOffer.id },
                       type: QueryTypes.SELECT,
                       model: User,
                       mapToModel: true,
@@ -459,7 +462,7 @@ router.put(
                 })
                 .then((user) => {
                   reqUser = user[0];
-                  return Project.findByPk(req.body.proj_id, { transaction: t });
+                  return Project.findByPk(req.params.id, { transaction: t });
                 })
                 .then((proj) => {
                   return Notification.create(
@@ -501,6 +504,7 @@ router.put(
                 });
             })
             .catch((err) => {
+              console.log(err);
               // Transaction has been rolled back
               // err is whatever rejected the promise chain returned to the transaction callback
               res.status(500).send({

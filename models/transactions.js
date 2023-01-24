@@ -1,7 +1,7 @@
 "use strict";
 const { Model, Sequelize } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class UserWithdrawalRequest extends Model {
+  class Transactions extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -9,20 +9,17 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      UserWithdrawalRequest.belongsTo(models.User, {
+      Transactions.belongsTo(models.User, {
+        foreignKey: "beneficiary_id",
+        as: "beneficiary",
+      });
+      Transactions.belongsTo(models.User, {
         foreignKey: "user_id",
-      });
-      UserWithdrawalRequest.hasMany(models.UserCreditCardRequest, {
-        foreignKey: "withdraw_id",
-        as: "creditcard",
-      });
-      UserWithdrawalRequest.hasMany(models.UserPaypalRequest, {
-        foreignKey: "withdraw_id",
-        as: "paypal",
+        as: "user",
       });
     }
   }
-  UserWithdrawalRequest.init(
+  Transactions.init(
     {
       id: {
         type: Sequelize.UUID,
@@ -30,8 +27,21 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
+      beneficiary_id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        allowNull: false,
+      },
+      type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       amount: {
         type: DataTypes.DECIMAL,
+        allowNull: false,
+      },
+      message: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
       user_id: {
@@ -39,26 +49,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
       },
-      accepted: {
-        type: DataTypes.BOOLEAN,
-      },
-      attachment: {
-        type: DataTypes.STRING,
-      },
-      type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      is_transfered: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false,
-      },
     },
     {
       sequelize,
-      modelName: "UserWithdrawalRequest",
+      modelName: "Transactions",
     }
   );
-  return UserWithdrawalRequest;
+  return Transactions;
 };

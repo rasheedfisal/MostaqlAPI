@@ -74,13 +74,21 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         as: "withdrawals",
       });
-      User.hasMany(models.UserWallet, {
+      User.hasOne(models.UserWallet, {
         foreignKey: "user_id",
         as: "wallet",
       });
       User.hasMany(models.UserAccountFeedRequest, {
         foreignKey: "user_id",
         as: "accountfeed",
+      });
+      User.hasMany(models.Transactions, {
+        foreignKey: "beneficiary_id",
+        as: "beneficiary",
+      });
+      User.hasMany(models.Transactions, {
+        foreignKey: "user_id",
+        as: "user",
       });
 
       //User.hasOne(models.Role);

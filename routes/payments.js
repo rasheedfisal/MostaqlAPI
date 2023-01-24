@@ -12,6 +12,7 @@ const {
   WithdrawableAmountSetting,
   User,
   Role,
+  Transactions,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -172,10 +173,13 @@ router.get(
           include: [
             {
               model: User,
-              include: {
-                model: Role,
-                attributes: ["role_name"],
-              },
+              include: [
+                { model: Role, attributes: ["role_name"] },
+                {
+                  model: UserWallet,
+                  as: "wallet",
+                },
+              ],
             },
           ],
           attributes: [
@@ -183,6 +187,7 @@ router.get(
             "amount",
             getPath(req, "attachment"),
             "accepted",
+            "is_transfered",
             "createdAt",
           ],
           distinct: true,
@@ -192,6 +197,7 @@ router.get(
             res.status(200).send(getPagingData(requests, page, limit));
           })
           .catch((error) => {
+            console.log(error);
             res.status(500).send({ msg: error });
           });
       })
@@ -337,7 +343,157 @@ router.put(
                     )
                       .then((_) => {
                         res.status(201).send({
-                          msg: "Resourse created Successfully",
+                          msg: "Resourse updated Successfully",
+                        });
+                      })
+                      .catch((_) => {
+                        res.status(500).send({
+                          msg: "the status has changed but the notification was not sent please resend from the notification page",
+                        });
+                      });
+                  })
+                  .catch((err) => {
+                    res.status(500).send({
+                      msg: err,
+                    });
+                  });
+              } else {
+                res.status(404).send({
+                  msg: "Request not found",
+                });
+              }
+            })
+            .catch((error) => {
+              res.status(500).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// transfer account feed money
+router.put(
+  "/feed/transfer/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "feed_request_account_approve_reject")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass required fields.",
+          });
+        } else {
+          UserAccountFeedRequest.findByPk(req.params.id)
+            .then((request) => {
+              if (request) {
+                let reqUser = {};
+                let notifiyUser = {};
+                sequelize
+                  .transaction((t) => {
+                    // chain all your queries here. make sure you return them.
+                    return sequelize
+                      .query(
+                        "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
+                        {
+                          replacements: { feedId: req.params.id },
+                          type: QueryTypes.SELECT,
+                          model: User,
+                          mapToModel: true,
+                        },
+                        { transaction: t }
+                      )
+                      .then((user) => {
+                        reqUser = user[0];
+                        return Transactions.create(
+                          {
+                            beneficiary_id: user[0].id,
+                            type: "dr",
+                            amount: request.amount,
+                            message: `${request.amount} have been added from your account`,
+                            user_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((_) => {
+                        return UserAccountFeedRequest.update(
+                          {
+                            is_transfered: true,
+                          },
+                          {
+                            where: {
+                              id: request.id,
+                            },
+                          }
+                        );
+                      })
+                      .then((_) => {
+                        return UserWallet.findOne({
+                          where: {
+                            user_id: reqUser.id,
+                          },
+                        });
+                      })
+                      .then((wallet) => {
+                        if (wallet) {
+                          return UserWallet.update(
+                            {
+                              credit: wallet.credit - request.amount,
+                            },
+                            {
+                              where: {
+                                id: wallet.id,
+                              },
+                            },
+                            { transaction: t }
+                          );
+                        } else {
+                          return UserWallet.create(
+                            {
+                              user_id: reqUser.id,
+                              credit: request.amount,
+                            },
+                            { transaction: t }
+                          );
+                        }
+                      })
+                      .then((_) => {
+                        return Notification.create(
+                          {
+                            title: "Money Transfer",
+                            description: `hello ${reqUser.fullname}, ${request.amount} have been added from your account as requested`,
+                            type: "admin-to-user",
+                            sender_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((notify) => {
+                        notifiyUser = notify;
+                        return ReadNotification.create(
+                          {
+                            notification_id: notify.id,
+                            receiver_id: reqUser.id,
+                          },
+                          { transaction: t }
+                        );
+                      });
+                  })
+                  .then((_) => {
+                    sendNotification(
+                      notifiyUser.title,
+                      notifiyUser.description,
+                      "test"
+                    )
+                      .then((_) => {
+                        res.status(201).send({
+                          msg: "Resourse updated Successfully",
                         });
                       })
                       .catch((_) => {
@@ -622,11 +778,18 @@ router.get(
           include: [
             {
               model: User,
-              include: {
-                model: Role,
-                attributes: ["role_name"],
-              },
+              include: [
+                {
+                  model: Role,
+                  attributes: ["role_name"],
+                },
+                {
+                  model: UserWallet,
+                  as: "wallet",
+                },
+              ],
             },
+
             {
               model: UserPaypalRequest,
               as: "paypal",
@@ -641,6 +804,7 @@ router.get(
             "amount",
             getPath(req, "attachment"),
             "accepted",
+            "is_transfered",
             "type",
             "createdAt",
           ],
@@ -805,7 +969,158 @@ router.put(
                     )
                       .then((_) => {
                         res.status(201).send({
-                          msg: "Resourse created Successfully",
+                          msg: "Resourse updated Successfully",
+                        });
+                      })
+                      .catch((_) => {
+                        res.status(500).send({
+                          msg: "the status has changed but the notification was not sent please resend from the notification page",
+                        });
+                      });
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                    res.status(500).send({
+                      msg: err,
+                    });
+                  });
+              } else {
+                res.status(404).send({
+                  msg: "Request not found",
+                });
+              }
+            })
+            .catch((error) => {
+              res.status(500).send({ msg: error });
+            });
+        }
+      })
+      .catch((error) => {
+        res.status(403).send({ msg: error });
+      });
+  }
+);
+
+// Transfer withdraw request Money
+router.put(
+  "/withdraw/transfer/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "withdraw_request_approve_reject")
+      .then((rolePerm) => {
+        if (!req.params.id) {
+          res.status(400).send({
+            msg: "Please pass required fields.",
+          });
+        } else {
+          UserWithdrawalRequest.findByPk(req.params.id)
+            .then((request) => {
+              if (request?.accepted) {
+                let reqUser = {};
+                let notifiyUser = {};
+                sequelize
+                  .transaction((t) => {
+                    // chain all your queries here. make sure you return them.
+                    return sequelize
+                      .query(
+                        "select * from users where id = (select user_id from userwithdrawalrequests where id= :reqId)",
+                        {
+                          replacements: { reqId: req.params.id },
+                          type: QueryTypes.SELECT,
+                          model: User,
+                          mapToModel: true,
+                        },
+                        { transaction: t }
+                      )
+                      .then((user) => {
+                        reqUser = user[0];
+                        return Transactions.create(
+                          {
+                            beneficiary_id: user[0].id,
+                            type: "cr",
+                            amount: request.amount,
+                            message: `${request.amount} have been withdrawn from your account`,
+                            user_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((_) => {
+                        return UserWithdrawalRequest.update(
+                          {
+                            is_transfered: true,
+                          },
+                          {
+                            where: {
+                              id: request.id,
+                            },
+                          }
+                        );
+                      })
+                      .then((_) => {
+                        return UserWallet.findOne({
+                          where: {
+                            user_id: reqUser.id,
+                          },
+                        });
+                      })
+                      .then((wallet) => {
+                        if (wallet) {
+                          return UserWallet.update(
+                            {
+                              credit: wallet.credit - request.amount,
+                            },
+                            {
+                              where: {
+                                id: wallet.id,
+                              },
+                            },
+                            { transaction: t }
+                          );
+                        } else {
+                          return UserWallet.create(
+                            {
+                              user_id: reqUser.id,
+                              credit: request.amount,
+                            },
+                            { transaction: t }
+                          );
+                        }
+                      })
+                      .then((_) => {
+                        return Notification.create(
+                          {
+                            title: "Money Transfer",
+                            description: `hello ${reqUser.fullname}, ${request.amount} was withdrawn from your account as requested`,
+                            type: "admin-to-user",
+                            sender_id: req.user.id,
+                          },
+                          { transaction: t }
+                        );
+                      })
+                      .then((notify) => {
+                        notifiyUser = notify;
+                        return ReadNotification.create(
+                          {
+                            notification_id: notify.id,
+                            receiver_id: reqUser.id,
+                          },
+                          { transaction: t }
+                        );
+                      });
+                  })
+                  .then((_) => {
+                    sendNotification(
+                      notifiyUser.title,
+                      notifiyUser.description,
+                      "test"
+                    )
+                      .then((_) => {
+                        res.status(201).send({
+                          msg: "Resourse updated Successfully",
                         });
                       })
                       .catch((_) => {
