@@ -4,6 +4,7 @@ const multer = require("multer");
 const {
   User,
   UserProfile,
+  UserWallet,
   ProjectOffer,
   UserCredentials,
   Project,
@@ -12,6 +13,7 @@ const {
   ProjectCompletedRequest,
   Notification,
   ReadNotification,
+  CommissionRate,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -259,120 +261,162 @@ router.put(
             msg: "missing fields please add required info.",
           });
         } else {
-          let notifiyUser = {};
-          let reqUser = {};
-          sequelize
-            .transaction((t) => {
-              // chain all your queries here. make sure you return them.
-              return ProjStatus.findOne(
-                {
-                  where: {
-                    stat_name: "In-Progress",
+          ProjectOffer.findOne({
+            include: [
+              {
+                model: Project,
+                include: {
+                  model: User,
+                  as: "owner",
+                  include: {
+                    model: UserWallet,
+                    as: "wallet",
                   },
                 },
-                { transaction: t }
-              )
-                .then((stat) => {
-                  return Project.update(
-                    {
-                      proj_status_id: stat.id,
-                    },
-                    {
-                      where: {
-                        id: req.body.proj_id,
-                      },
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((_) => {
-                  return ProjectOffer.update(
-                    {
-                      accept_status: true,
-                    },
-                    {
-                      where: {
-                        id: req.params.id,
-                      },
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((_) => {
-                  return ProjectOffer.update(
-                    {
-                      accept_status: false,
-                    },
-                    {
-                      where: {
-                        proj_id: req.body.proj_id,
-                        accept_status: null,
-                      },
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((_) => {
-                  return sequelize.query(
-                    "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
-                    {
-                      replacements: { reqId: req.params.id },
-                      type: QueryTypes.SELECT,
-                      model: User,
-                      mapToModel: true,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((user) => {
-                  reqUser = user[0];
-                  return Project.findByPk(req.body.proj_id, { transaction: t });
-                })
-                .then((proj) => {
-                  return Notification.create(
-                    {
-                      title: "Project In Progress",
-                      description: `congratulations ${reqUser.fullname} project owner ${req.user.fullname} choosed you for project ${proj.proj_title} get ready`,
-                      type: "user-to-user",
-                      sender_id: req.user.id,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((notify) => {
-                  notifiyUser = notify;
-                  return ReadNotification.create(
-                    {
-                      notification_id: notify.id,
-                      receiver_id: reqUser.id,
-                    },
-                    { transaction: t }
-                  );
+              },
+              {
+                model: CommissionRate,
+                as: "commissionRate",
+              },
+            ],
+            where: {
+              id: req.params.id,
+            },
+          })
+            .then((offer) => {
+              if (offer.Project.owner.wallet === null) {
+                return res.status(400).send({
+                  msg: "Wallet is Empty.",
                 });
-            })
-            .then((_) => {
-              sendNotification(
-                notifiyUser.title,
-                notifiyUser.description,
-                reqUser.email
-              )
-                .then((_) => {
-                  res.status(200).send({
-                    msg: "Resourse Updated Successfully",
-                  });
+              }
+              const ratePercent = offer.commissionRate.ratepercent;
+              const discountAmount = (offer.price * ratePercent) / 100;
+              const fullAmount = offer.price + discountAmount;
+              if (offer.Project.owner.wallet?.credit < fullAmount) {
+                return res.status(400).send({
+                  msg: "Credit is Insufficient.",
+                });
+              }
+              let notifiyUser = {};
+              let reqUser = {};
+              sequelize
+                .transaction((t) => {
+                  // chain all your queries here. make sure you return them.
+                  return ProjStatus.findOne(
+                    {
+                      where: {
+                        stat_name: "In-Progress",
+                      },
+                    },
+                    { transaction: t }
+                  )
+                    .then((stat) => {
+                      return Project.update(
+                        {
+                          proj_status_id: stat.id,
+                        },
+                        {
+                          where: {
+                            id: req.body.proj_id,
+                          },
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((_) => {
+                      return ProjectOffer.update(
+                        {
+                          accept_status: false,
+                        },
+                        {
+                          where: {
+                            proj_id: req.body.proj_id,
+                          },
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((_) => {
+                      return ProjectOffer.update(
+                        {
+                          accept_status: true,
+                        },
+                        {
+                          where: {
+                            id: req.params.id,
+                          },
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((_) => {
+                      return sequelize.query(
+                        "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
+                        {
+                          replacements: { reqId: req.params.id },
+                          type: QueryTypes.SELECT,
+                          model: User,
+                          mapToModel: true,
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((user) => {
+                      reqUser = user[0];
+                      return Project.findByPk(req.body.proj_id, {
+                        transaction: t,
+                      });
+                    })
+                    .then((proj) => {
+                      return Notification.create(
+                        {
+                          title: "Project In Progress",
+                          description: `congratulations ${reqUser.fullname} project owner ${req.user.fullname} choosed you for project ${proj.proj_title} get ready`,
+                          type: "user-to-user",
+                          sender_id: req.user.id,
+                        },
+                        { transaction: t }
+                      );
+                    })
+                    .then((notify) => {
+                      notifiyUser = notify;
+                      return ReadNotification.create(
+                        {
+                          notification_id: notify.id,
+                          receiver_id: reqUser.id,
+                        },
+                        { transaction: t }
+                      );
+                    });
                 })
-                .catch((error) => {
-                  console.log(error);
+                .then((_) => {
+                  sendNotification(
+                    notifiyUser.title,
+                    notifiyUser.description,
+                    reqUser.email
+                  )
+                    .then((_) => {
+                      res.status(200).send({
+                        msg: "Resourse Updated Successfully",
+                      });
+                    })
+                    .catch((error) => {
+                      res.status(500).send({
+                        msg: "the status has changed but the notification was not sent please resend from the notification page",
+                      });
+                    });
+                })
+                .catch((err) => {
+                  // Transaction has been rolled back
+                  // err is whatever rejected the promise chain returned to the transaction callback
                   res.status(500).send({
-                    msg: "the status has changed but the notification was not sent please resend from the notification page",
+                    msg: err,
                   });
                 });
             })
-            .catch((err) => {
-              // Transaction has been rolled back
-              // err is whatever rejected the promise chain returned to the transaction callback
+            .catch((error) => {
               res.status(500).send({
-                msg: err,
+                msg: "Internal Server Error",
               });
             });
         }

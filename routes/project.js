@@ -1573,12 +1573,12 @@ router.put(
             user_id: projectDetails.projectoffers[0].client.id,
           },
         });
-        let ratePercent = 0;
-        let amount = 0;
+        const ratePercent =
+          projectDetails.projectoffers[0].commissionRate.ratepercent;
+        const discountAmount =
+          (projectDetails.projectoffers[0].price * ratePercent) / 100;
+        const amount = projectDetails.projectoffers[0].price - discountAmount;
         if (wallet) {
-          ratePercent =
-            projectDetails.projectoffers[0].commissionRate.ratepercent;
-          amount = (projectDetails.projectoffers[0].price * ratePercent) / 100;
           await UserWallet.update(
             {
               credit: wallet.credit + amount,
@@ -1591,9 +1591,6 @@ router.put(
             { transaction: t }
           );
         } else {
-          ratePercent =
-            projectDetails.projectoffers[0].commissionRate.ratepercent;
-          amount = (projectDetails.projectoffers[0].price * ratePercent) / 100;
           await UserWallet.create(
             {
               user_id: projectDetails.projectoffers[0].client.id,
