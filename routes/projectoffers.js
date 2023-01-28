@@ -354,14 +354,15 @@ router.put(
               sendNotification(
                 notifiyUser.title,
                 notifiyUser.description,
-                "test"
+                reqUser.email
               )
                 .then((_) => {
                   res.status(200).send({
-                    msg: "Resourse created Successfully",
+                    msg: "Resourse Updated Successfully",
                   });
                 })
-                .catch((_) => {
+                .catch((error) => {
+                  console.log(error);
                   res.status(500).send({
                     msg: "the status has changed but the notification was not sent please resend from the notification page",
                   });
@@ -494,7 +495,7 @@ router.put(
               )
                 .then((_) => {
                   res.status(200).send({
-                    msg: "Resourse created Successfully",
+                    msg: "Resourse Updated Successfully",
                   });
                 })
                 .catch((_) => {

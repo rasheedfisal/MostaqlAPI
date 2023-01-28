@@ -14,7 +14,6 @@ module.exports = {
   },
   handleResponse: (res, msg, code) => {
     res.status(code).send({
-      success: false,
       msg,
     });
   },

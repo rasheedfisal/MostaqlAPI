@@ -25,6 +25,7 @@ const { QueryTypes } = require("sequelize");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { isUserHaveMinimumAmount } = require("../utils/commissions");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
+const { sendEmailRequest } = require("../utils/advanceMailer");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -91,7 +92,7 @@ router.post(
 
       await sequelize.transaction(async (t) => {
         // chain all your queries here. make sure you return them.
-        await UserAccountFeedRequest.create(
+        const request = await UserAccountFeedRequest.create(
           {
             user_id: req.user.id,
             amount: req.body.amount,
@@ -111,7 +112,7 @@ router.post(
         );
 
         const users = await sequelize.query(
-          "select id from users where role_id in(select a.id from roles as a " +
+          "select * from users where role_id in(select a.id from roles as a " +
             "inner join rolepermissions as ro on a.id = ro.role_id " +
             "inner join permissions as p on ro.perm_id = p.id " +
             "where p.perm_name = 'can_access_dashboard')",
@@ -136,9 +137,29 @@ router.post(
         });
         await Promise.all(promises);
 
+        // var emailPromises = [];
+
+        // users.map((a) => {
+        //   var newPromise = ;
+        //   emailPromises.push(newPromise);
+        // });
+        // await Promise.all(emailPromises);
+
+        await sendEmailRequest({
+          req,
+          path: req.file?.path,
+          name: "Staff Members",
+          requestName: notification.title,
+          requestId: request.id,
+          description: notification.description,
+          amount: request.amount,
+          email: users.map((a) => a.email),
+        });
+
         return handleResponse(res, "Resources Created Successfully", 201);
       });
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }

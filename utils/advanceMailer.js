@@ -103,4 +103,55 @@ module.exports = {
       console.error(error);
     }
   },
+
+  sendEmailRequest: async ({
+    req,
+    path,
+    name,
+    requestName,
+    requestId,
+    description,
+    amount,
+    email,
+    attachment,
+  }) => {
+    try {
+      const fullPath = req.protocol + "://" + req.get("host") + "/" + path;
+      var today = new Date();
+      var date =
+        today.getFullYear() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getDate();
+      var time =
+        today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+      var dateTime = date + " " + time;
+
+      var variables = {
+        name,
+        requestName,
+        requestId,
+        description,
+        amount,
+        datetime: dateTime,
+        attachment,
+      };
+      const { html, text, subject } = await templates.render(
+        "paymentRequest.html",
+        variables
+      );
+      var emailInfo = {
+        from: process.env.MAILING_EMAIL,
+        to: email,
+        subject: requestName,
+        text: text,
+        html: html,
+      };
+      emailProcessor.sendMail(emailInfo);
+      console.log("message sent");
+    } catch (error) {
+      console.error(error);
+    }
+  },
 };
