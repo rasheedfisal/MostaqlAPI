@@ -257,6 +257,7 @@ router.get(
                 },
               ],
               distinct: true,
+              order: [["createdAt", "desc"]],
               where: {
                 proj_title: {
                   [Op.like]: `%${search}%`,
@@ -264,13 +265,21 @@ router.get(
                 proj_status_id: {
                   [Op.eq]: stat.id,
                 },
+                user_added_id: {
+                  [Op.ne]: req.user?.id,
+                },
+                id: {
+                  [Op.notIn]: Sequelize.literal(
+                    `(SELECT offer.proj_id FROM projectoffers AS offer WHERE offer.user_offered_id= '${req.user.id}')`
+                  ),
+                },
               },
-              order: [["createdAt", "desc"]],
             })
               .then((projects) =>
                 res.status(200).send(getPagingData(projects, page, limit))
               )
               .catch((error) => {
+                console.log(error);
                 res.status(500).send({
                   success: false,
                   msg: error,
