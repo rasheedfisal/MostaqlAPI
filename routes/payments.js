@@ -24,6 +24,7 @@ const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { isUserHaveMinimumAmount } = require("../utils/commissions");
+const { handleForbidden, handleResponse } = require("../utils/handleError");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -74,84 +75,72 @@ router.post(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "feed_request_account_add")
-      .then((rolePerm) => {
-        if (!req.body.amount) {
-          res.status(400).send({
-            msg: "Please pass Role ID, email, password, phone or fullname.",
-          });
-        } else {
-          let notify = {};
-          sequelize
-            .transaction((t) => {
-              // chain all your queries here. make sure you return them.
-              return UserAccountFeedRequest.create(
-                {
-                  user_id: req.user.id,
-                  amount: req.body.amount,
-                  attachment: req.file?.path,
-                },
-                { transaction: t }
-              )
-                .then((request) => {
-                  return Notification.create(
-                    {
-                      title: "Account Feed Request",
-                      description: `user ${req.user.fullname} is requesting to add money into his account based on the attachment he sent, please view the attachment below`,
-                      type: "user-to-admin",
-                      sender_id: req.user.id,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((notification) => {
-                  notify = notification;
-                  return sequelize.query(
-                    "select id from users where role_id in(select a.id from roles as a " +
-                      "inner join rolepermissions as ro on a.id = ro.role_id " +
-                      "inner join permissions as p on ro.perm_id = p.id " +
-                      "where p.perm_name = 'can_access_dashboard')",
-                    {
-                      type: QueryTypes.SELECT,
-                      model: User,
-                      mapToModel: true,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((users) => {
-                  var promises = [];
-                  users.map((a) => {
-                    var newPromise = ReadNotification.create(
-                      {
-                        notification_id: notify.id,
-                        receiver_id: a.id,
-                      },
-                      { transaction: t }
-                    );
-                    promises.push(newPromise);
-                  });
-                  return Promise.all(promises);
-                });
-            })
-            .then((_) => {
-              res.status(201).send({
-                msg: "Resourse created Successfully",
-              });
-            })
-            .catch((err) => {
-              console.log(err);
-              res.status(500).send({
-                msg: err,
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "feed_request_account_add"
+      );
+
+      if (!req.body.amount)
+        return handleResponse(
+          res,
+          "Please pass Role ID, email, password, phone or fullname.",
+          400
+        );
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        await UserAccountFeedRequest.create(
+          {
+            user_id: req.user.id,
+            amount: req.body.amount,
+            attachment: req.file?.path,
+          },
+          { transaction: t }
+        );
+
+        const notification = await Notification.create(
+          {
+            title: "Account Feed Request",
+            description: `user ${req.user.fullname} is requesting to add money into his account based on the attachment he sent, please view the attachment below`,
+            type: "user-to-admin",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+
+        const users = await sequelize.query(
+          "select id from users where role_id in(select a.id from roles as a " +
+            "inner join rolepermissions as ro on a.id = ro.role_id " +
+            "inner join permissions as p on ro.perm_id = p.id " +
+            "where p.perm_name = 'can_access_dashboard')",
+          {
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+
+        var promises = [];
+        users.map((a) => {
+          var newPromise = ReadNotification.create(
+            {
+              notification_id: notification.id,
+              receiver_id: a.id,
+            },
+            { transaction: t }
+          );
+          promises.push(newPromise);
+        });
+        await Promise.all(promises);
+
+        return handleResponse(res, "Resources Created Successfully", 201);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -268,109 +257,73 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "feed_request_account_approve_reject")
-      .then((rolePerm) => {
-        if (!req.params.id) {
-          res.status(400).send({
-            msg: "Please pass required fields.",
-          });
-        } else {
-          UserAccountFeedRequest.findByPk(req.params.id)
-            .then((request) => {
-              if (request) {
-                let reqUser = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return UserAccountFeedRequest.update(
-                      {
-                        accepted: req.body?.accepted,
-                      },
-                      {
-                        where: {
-                          id: req.params.id,
-                        },
-                      },
-                      { transaction: t }
-                    )
-                      .then((_) => {
-                        return sequelize.query(
-                          "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
-                          {
-                            replacements: { feedId: req.params.id },
-                            type: QueryTypes.SELECT,
-                            model: User,
-                            mapToModel: true,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((user) => {
-                        reqUser = user[0];
-                        return Notification.create(
-                          {
-                            title: "Account Feed Request",
-                            description: `hello ${
-                              user[0].fullname
-                            }, your request for feeding your account was ${
-                              req.body?.accepted ? "accepted" : "rejected"
-                            }`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
-                        return ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: reqUser.id,
-                          },
-                          { transaction: t }
-                        );
-                      });
-                  })
-                  .then((_) => {
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    )
-                      .then((_) => {
-                        res.status(201).send({
-                          msg: "Resourse updated Successfully",
-                        });
-                      })
-                      .catch((_) => {
-                        res.status(500).send({
-                          msg: "the status has changed but the notification was not sent please resend from the notification page",
-                        });
-                      });
-                  })
-                  .catch((err) => {
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "Request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({ msg: error });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "feed_request_account_approve_reject"
+      );
+
+      if (!req.params.id)
+        return handleResponse(res, "Please pass required fields.", 400);
+
+      const request = await UserAccountFeedRequest.findByPk(req.params.id);
+
+      if (!request) return handleResponse(res, "Request Not Found.", 404);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        await UserAccountFeedRequest.update(
+          {
+            accepted: req.body?.accepted,
+          },
+          {
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+
+        const user = await sequelize.query(
+          "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
+          {
+            replacements: { feedId: req.params.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+
+        const notify = await Notification.create(
+          {
+            title: "Account Feed Request",
+            description: `hello ${
+              user[0].fullname
+            }, your request for feeding your account was ${
+              req.body?.accepted ? "accepted" : "rejected"
+            }`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+
+        await sendNotification(notify.title, notify.description, "test");
+
+        return handleResponse(res, "Resources Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -380,147 +333,99 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "feed_request_account_approve_reject")
-      .then((rolePerm) => {
-        if (!req.params.id) {
-          res.status(400).send({
-            msg: "Please pass required fields.",
-          });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "feed_request_account_approve_reject"
+      );
+
+      if (!req.params.id)
+        return handleResponse(res, "Please pass required fields.", 400);
+
+      const request = await UserAccountFeedRequest.findByPk(req.params.id);
+
+      if (!request) return handleResponse(res, "Request Not Found.", 404);
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const user = await sequelize.query(
+          "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
+          {
+            replacements: { feedId: req.params.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        await Transactions.create(
+          {
+            beneficiary_id: user[0].id,
+            type: "dr",
+            amount: request.amount,
+            message: `${request.amount} have been added from your account`,
+            user_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await UserAccountFeedRequest.update(
+          {
+            is_transfered: true,
+          },
+          {
+            where: {
+              id: request.id,
+            },
+          }
+        );
+        const wallet = await UserWallet.findOne({
+          where: {
+            user_id: reqUser.id,
+          },
+        });
+        if (wallet) {
+          await UserWallet.update(
+            {
+              credit: wallet.credit - request.amount,
+            },
+            {
+              where: {
+                id: wallet.id,
+              },
+            },
+            { transaction: t }
+          );
         } else {
-          UserAccountFeedRequest.findByPk(req.params.id)
-            .then((request) => {
-              if (request) {
-                let reqUser = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return sequelize
-                      .query(
-                        "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
-                        {
-                          replacements: { feedId: req.params.id },
-                          type: QueryTypes.SELECT,
-                          model: User,
-                          mapToModel: true,
-                        },
-                        { transaction: t }
-                      )
-                      .then((user) => {
-                        reqUser = user[0];
-                        return Transactions.create(
-                          {
-                            beneficiary_id: user[0].id,
-                            type: "dr",
-                            amount: request.amount,
-                            message: `${request.amount} have been added from your account`,
-                            user_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((_) => {
-                        return UserAccountFeedRequest.update(
-                          {
-                            is_transfered: true,
-                          },
-                          {
-                            where: {
-                              id: request.id,
-                            },
-                          }
-                        );
-                      })
-                      .then((_) => {
-                        return UserWallet.findOne({
-                          where: {
-                            user_id: reqUser.id,
-                          },
-                        });
-                      })
-                      .then((wallet) => {
-                        if (wallet) {
-                          return UserWallet.update(
-                            {
-                              credit: wallet.credit - request.amount,
-                            },
-                            {
-                              where: {
-                                id: wallet.id,
-                              },
-                            },
-                            { transaction: t }
-                          );
-                        } else {
-                          return UserWallet.create(
-                            {
-                              user_id: reqUser.id,
-                              credit: request.amount,
-                            },
-                            { transaction: t }
-                          );
-                        }
-                      })
-                      .then((_) => {
-                        return Notification.create(
-                          {
-                            title: "Money Transfer",
-                            description: `hello ${reqUser.fullname}, ${request.amount} have been added from your account as requested`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
-                        return ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: reqUser.id,
-                          },
-                          { transaction: t }
-                        );
-                      });
-                  })
-                  .then((_) => {
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    )
-                      .then((_) => {
-                        res.status(201).send({
-                          msg: "Resourse updated Successfully",
-                        });
-                      })
-                      .catch((_) => {
-                        res.status(500).send({
-                          msg: "the status has changed but the notification was not sent please resend from the notification page",
-                        });
-                      });
-                  })
-                  .catch((err) => {
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "Request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({ msg: error });
-            });
+          await UserWallet.create(
+            {
+              user_id: reqUser.id,
+              credit: request.amount,
+            },
+            { transaction: t }
+          );
         }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+        const notify = await Notification.create(
+          {
+            title: "Money Transfer",
+            description: `hello ${user[0].fullname}, ${request.amount} have been added from your account as requested`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+        await sendNotification(notify.title, notify.description, "test");
+        return handleResponse(res, "Resources Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -533,108 +438,77 @@ router.post(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "withdraw_request_account_add")
-      .then((rolePerm) => {
-        if (!req.body.amount || !req.body.email) {
-          res.status(400).send({
-            msg: "Please pass Role ID, email, password, phone or fullname.",
-          });
-        } else {
-          isUserHaveMinimumAmount()
-            .then((isTrue) => {
-              if (!isTrue) {
-                res.status(400).send({
-                  msg: "User Doesn't have Sufficient Credit",
-                });
-              } else {
-                let notify = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return UserWithdrawalRequest.create(
-                      {
-                        amount: req.body.amount,
-                        user_id: req.user.id,
-                        attachment: req.file?.path,
-                        type: "paypal",
-                      },
-                      { transaction: t }
-                    )
-                      .then((request) => {
-                        return UserPaypalRequest.create(
-                          {
-                            withdraw_id: request.id,
-                            email: req.body.email,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((paypal) => {
-                        return Notification.create(
-                          {
-                            title: "Paypal Withdrawal Request",
-                            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notification) => {
-                        notify = notification;
-                        return sequelize.query(
-                          "select id from users where role_id in(select a.id from roles as a " +
-                            "inner join rolepermissions as ro on a.id = ro.role_id " +
-                            "inner join permissions as p on ro.perm_id = p.id " +
-                            "where p.perm_name = 'can_access_dashboard')",
-                          {
-                            type: QueryTypes.SELECT,
-                            model: User,
-                            mapToModel: true,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((users) => {
-                        var promises = [];
-                        users.map((a) => {
-                          var newPromise = ReadNotification.create(
-                            {
-                              notification_id: notify.id,
-                              receiver_id: a.id,
-                            },
-                            { transaction: t }
-                          );
-                          promises.push(newPromise);
-                        });
-                        return Promise.all(promises);
-                      });
-                  })
-                  .then((_) => {
-                    res.status(201).send({
-                      msg: "Resourse created Successfully",
-                    });
-                  })
-                  .catch((err) => {
-                    console.log(err);
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              }
-            })
-            .catch((error) => {
-              res.status(400).send({
-                msg: "Resourse created Successfully",
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "withdraw_request_account_add"
+      );
+
+      if (!req.body.amount || !req.body.email)
+        return handleResponse(res, "Please Pass Required Fields.", 400);
+
+      const isTrue = await isUserHaveMinimumAmount();
+      if (!isTrue)
+        return handleResponse(res, "User Doesn't have Sufficient Credit.", 400);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const request = await UserWithdrawalRequest.create(
+          {
+            amount: req.body.amount,
+            user_id: req.user.id,
+            attachment: req.file?.path,
+            type: "paypal",
+          },
+          { transaction: t }
+        );
+        await UserPaypalRequest.create(
+          {
+            withdraw_id: request.id,
+            email: req.body.email,
+          },
+          { transaction: t }
+        );
+        const notify = await Notification.create(
+          {
+            title: "Paypal Withdrawal Request",
+            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        const users = await sequelize.query(
+          "select id from users where role_id in(select a.id from roles as a " +
+            "inner join rolepermissions as ro on a.id = ro.role_id " +
+            "inner join permissions as p on ro.perm_id = p.id " +
+            "where p.perm_name = 'can_access_dashboard')",
+          {
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+
+        var promises = [];
+        users.map((a) => {
+          var newPromise = ReadNotification.create(
+            {
+              notification_id: notify.id,
+              receiver_id: a.id,
+            },
+            { transaction: t }
+          );
+          promises.push(newPromise);
+        });
+        await Promise.all(promises);
+        return handleResponse(res, "Resources Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -645,118 +519,85 @@ router.post(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "withdraw_request_account_add")
-      .then((rolePerm) => {
-        if (
-          !req.body.amount ||
-          !req.body.name ||
-          !req.body.card_number ||
-          !req.body.expiration ||
-          !req.body.security_code
-        ) {
-          res.status(400).send({
-            msg: "Please pass Role ID, email, password, phone or fullname.",
-          });
-        } else {
-          isUserHaveMinimumAmount()
-            .then((isTrue) => {
-              if (!isTrue) {
-                res.status(400).send({
-                  msg: "User Doesn't have Sufficient Credit",
-                });
-              } else {
-                let notify = {};
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "withdraw_request_account_add"
+      );
 
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return UserWithdrawalRequest.create(
-                      {
-                        amount: req.body.amount,
-                        user_id: req.user.id,
-                        attachment: req.file?.path,
-                        type: "creditcard",
-                      },
-                      { transaction: t }
-                    )
-                      .then((request) => {
-                        return UserCreditCardRequest.create(
-                          {
-                            withdraw_id: request.id,
-                            name: req.body.name,
-                            card_number: req.body.card_number,
-                            expiration: req.body.expiration,
-                            security_code: req.body.security_code,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((paypal) => {
-                        return Notification.create(
-                          {
-                            title: "Credit Card Withdrawal Request",
-                            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notification) => {
-                        notify = notification;
-                        return sequelize.query(
-                          "select id from users where role_id in(select a.id from roles as a " +
-                            "inner join rolepermissions as ro on a.id = ro.role_id " +
-                            "inner join permissions as p on ro.perm_id = p.id " +
-                            "where p.perm_name = 'can_access_dashboard')",
-                          {
-                            type: QueryTypes.SELECT,
-                            model: User,
-                            mapToModel: true,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((users) => {
-                        var promises = [];
-                        users.map((a) => {
-                          var newPromise = ReadNotification.create(
-                            {
-                              notification_id: notify.id,
-                              receiver_id: a.id,
-                            },
-                            { transaction: t }
-                          );
-                          promises.push(newPromise);
-                        });
-                        return Promise.all(promises);
-                      });
-                  })
-                  .then((_) => {
-                    res.status(201).send({
-                      msg: "Resourse created Successfully",
-                    });
-                  })
-                  .catch((err) => {
-                    console.log(err);
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              }
-            })
-            .catch((error) => {
-              res.status(400).send({
-                msg: "Resourse created Successfully",
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+      if (
+        !req.body.amount ||
+        !req.body.name ||
+        !req.body.card_number ||
+        !req.body.expiration ||
+        !req.body.security_code
+      )
+        return handleResponse(res, "Please Pass Required Fields.", 400);
+
+      const isTrue = await isUserHaveMinimumAmount();
+      if (!isTrue)
+        return handleResponse(res, "User Doesn't have Sufficient Credit", 400);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const request = await UserWithdrawalRequest.create(
+          {
+            amount: req.body.amount,
+            user_id: req.user.id,
+            attachment: req.file?.path,
+            type: "creditcard",
+          },
+          { transaction: t }
+        );
+        await UserCreditCardRequest.create(
+          {
+            withdraw_id: request.id,
+            name: req.body.name,
+            card_number: req.body.card_number,
+            expiration: req.body.expiration,
+            security_code: req.body.security_code,
+          },
+          { transaction: t }
+        );
+        const notify = await Notification.create(
+          {
+            title: "Credit Card Withdrawal Request",
+            description: `user ${req.user.fullname} is requesting to withdraw money from his account based on the attachment he sent, please view the attachment below`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        const users = await sequelize.query(
+          "select id from users where role_id in(select a.id from roles as a " +
+            "inner join rolepermissions as ro on a.id = ro.role_id " +
+            "inner join permissions as p on ro.perm_id = p.id " +
+            "where p.perm_name = 'can_access_dashboard')",
+          {
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        var promises = [];
+        users.map((a) => {
+          var newPromise = ReadNotification.create(
+            {
+              notification_id: notify.id,
+              receiver_id: a.id,
+            },
+            { transaction: t }
+          );
+          promises.push(newPromise);
+        });
+        await Promise.all(promises);
+        return handleResponse(res, "Resourse created Successfully", 201);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -894,110 +735,69 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "withdraw_request_approve_reject")
-      .then((rolePerm) => {
-        if (!req.params.id) {
-          res.status(400).send({
-            msg: "Please pass required fields.",
-          });
-        } else {
-          UserWithdrawalRequest.findByPk(req.params.id)
-            .then((request) => {
-              if (request) {
-                let reqUser = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return UserWithdrawalRequest.update(
-                      {
-                        accepted: req.body?.accepted,
-                      },
-                      {
-                        where: {
-                          id: req.params.id,
-                        },
-                      },
-                      { transaction: t }
-                    )
-                      .then((_) => {
-                        return sequelize.query(
-                          "select * from users where id = (select user_id from userwithdrawalrequests where id= :reqId)",
-                          {
-                            replacements: { reqId: req.params.id },
-                            type: QueryTypes.SELECT,
-                            model: User,
-                            mapToModel: true,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((user) => {
-                        reqUser = user[0];
-                        return Notification.create(
-                          {
-                            title: "Withrawal Request",
-                            description: `hello ${
-                              user[0].fullname
-                            }, your request for withdraw money from your account was ${
-                              req.body?.accepted ? "accepted" : "rejected"
-                            }`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
-                        return ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: reqUser.id,
-                          },
-                          { transaction: t }
-                        );
-                      });
-                  })
-                  .then((_) => {
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    )
-                      .then((_) => {
-                        res.status(201).send({
-                          msg: "Resourse updated Successfully",
-                        });
-                      })
-                      .catch((_) => {
-                        res.status(500).send({
-                          msg: "the status has changed but the notification was not sent please resend from the notification page",
-                        });
-                      });
-                  })
-                  .catch((err) => {
-                    console.log(err);
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "Request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({ msg: error });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "withdraw_request_approve_reject"
+      );
+
+      if (!req.params.id)
+        return handleResponse(res, "Please Pass Required Fields.", 400);
+
+      const request = await UserWithdrawalRequest.findByPk(req.params.id);
+
+      if (!request) return handleResponse(res, "Request Not Found.", 404);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        await UserWithdrawalRequest.update(
+          {
+            accepted: req.body?.accepted,
+          },
+          {
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        const user = await sequelize.query(
+          "select * from users where id = (select user_id from userwithdrawalrequests where id= :reqId)",
+          {
+            replacements: { reqId: req.params.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        const notify = await Notification.create(
+          {
+            title: "Withrawal Request",
+            description: `hello ${
+              user[0].fullname
+            }, your request for withdraw money from your account was ${
+              req.body?.accepted ? "accepted" : "rejected"
+            }`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+        await sendNotification(notify.title, notify.description, "test");
+        return handleResponse(res, "Resources Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -1007,148 +807,105 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "withdraw_request_approve_reject")
-      .then((rolePerm) => {
-        if (!req.params.id) {
-          res.status(400).send({
-            msg: "Please pass required fields.",
-          });
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "withdraw_request_approve_reject"
+      );
+
+      if (!req.params.id)
+        return handleResponse(res, "Please Pass Required Fields.");
+
+      const request = await UserWithdrawalRequest.findByPk(req.params.id);
+
+      if (!request?.accepted)
+        return handleResponse(res, "Request was not Approved.", 400);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const user = await sequelize.query(
+          "select * from users where id = (select user_id from userwithdrawalrequests where id= :reqId)",
+          {
+            replacements: { reqId: req.params.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        await Transactions.create(
+          {
+            beneficiary_id: user[0].id,
+            type: "cr",
+            amount: request.amount,
+            message: `${request.amount} have been withdrawn from your account`,
+            user_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await UserWithdrawalRequest.update(
+          {
+            is_transfered: true,
+          },
+          {
+            where: {
+              id: request.id,
+            },
+          }
+        );
+        const wallet = await UserWallet.findOne({
+          where: {
+            user_id: reqUser.id,
+          },
+        });
+        if (wallet) {
+          await UserWallet.update(
+            {
+              credit: wallet.credit - request.amount,
+            },
+            {
+              where: {
+                id: wallet.id,
+              },
+            },
+            { transaction: t }
+          );
         } else {
-          UserWithdrawalRequest.findByPk(req.params.id)
-            .then((request) => {
-              if (request?.accepted) {
-                let reqUser = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return sequelize
-                      .query(
-                        "select * from users where id = (select user_id from userwithdrawalrequests where id= :reqId)",
-                        {
-                          replacements: { reqId: req.params.id },
-                          type: QueryTypes.SELECT,
-                          model: User,
-                          mapToModel: true,
-                        },
-                        { transaction: t }
-                      )
-                      .then((user) => {
-                        reqUser = user[0];
-                        return Transactions.create(
-                          {
-                            beneficiary_id: user[0].id,
-                            type: "cr",
-                            amount: request.amount,
-                            message: `${request.amount} have been withdrawn from your account`,
-                            user_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((_) => {
-                        return UserWithdrawalRequest.update(
-                          {
-                            is_transfered: true,
-                          },
-                          {
-                            where: {
-                              id: request.id,
-                            },
-                          }
-                        );
-                      })
-                      .then((_) => {
-                        return UserWallet.findOne({
-                          where: {
-                            user_id: reqUser.id,
-                          },
-                        });
-                      })
-                      .then((wallet) => {
-                        if (wallet) {
-                          return UserWallet.update(
-                            {
-                              credit: wallet.credit - request.amount,
-                            },
-                            {
-                              where: {
-                                id: wallet.id,
-                              },
-                            },
-                            { transaction: t }
-                          );
-                        } else {
-                          return UserWallet.create(
-                            {
-                              user_id: reqUser.id,
-                              credit: request.amount,
-                            },
-                            { transaction: t }
-                          );
-                        }
-                      })
-                      .then((_) => {
-                        return Notification.create(
-                          {
-                            title: "Money Transfer",
-                            description: `hello ${reqUser.fullname}, ${request.amount} was withdrawn from your account as requested`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
-                        return ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: reqUser.id,
-                          },
-                          { transaction: t }
-                        );
-                      });
-                  })
-                  .then((_) => {
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    )
-                      .then((_) => {
-                        res.status(201).send({
-                          msg: "Resourse updated Successfully",
-                        });
-                      })
-                      .catch((_) => {
-                        res.status(500).send({
-                          msg: "the status has changed but the notification was not sent please resend from the notification page",
-                        });
-                      });
-                  })
-                  .catch((err) => {
-                    console.log(err);
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "Request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({ msg: error });
-            });
+          await UserWallet.create(
+            {
+              user_id: user[0].id,
+              credit: request.amount,
+            },
+            { transaction: t }
+          );
         }
-      })
-      .catch((error) => {
-        res.status(403).send({ msg: error });
+        const notify = await Notification.create(
+          {
+            title: "Money Transfer",
+            description: `hello ${user[0].fullname}, ${request.amount} was withdrawn from your account as requested`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+        await sendNotification(
+          notifiyUser.title,
+          notifiyUser.description,
+          "test"
+        );
+        return handleResponse(res, "Resources Updated Successfully.");
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 

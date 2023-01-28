@@ -32,6 +32,7 @@ const { getPath } = require("../utils/fileUrl");
 // const { getAllEnginnerEmailList } = require("../utils/findUsers");
 // const { sendToAllEnginners } = require("../utils/advanceMailer");
 const { sendNotification } = require("../utils/advanceNotifier");
+const { handleForbidden, handleResponse } = require("../utils/handleError");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -1066,7 +1067,6 @@ router.put(
                   );
                 })
                 .then((proj) => {
-                  console.log(proj);
                   proj_details = proj;
                   return Notification.create(
                     {
@@ -1353,176 +1353,123 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "project_cancel_update_status")
-      .then((rolePerm) => {
-        if (!req.params.id || !req.body.offer_id) {
-          res.status(400).send({
-            msg: "missing fields please add required info.",
-          });
-        } else {
-          ProjectCompletedRequest.findOne({
-            where: {
-              proj_id: req.params.id,
-              offer_id: req.body.offer_id,
-            },
-          })
-            .then((request) => {
-              if (request) {
-                let proj_details = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return ProjectCompletedRequest.update(
-                      {
-                        approved: true,
-                      },
-                      {
-                        where: {
-                          id: request.id,
-                        },
-                      },
-                      { transaction: t }
-                    )
-                      .then((request) => {
-                        return ProjStatus.findOne(
-                          {
-                            where: {
-                              stat_name: "Completed",
-                            },
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((stat) => {
-                        return Project.update(
-                          {
-                            proj_status_id: stat.id,
-                          },
-                          {
-                            where: {
-                              id: req.params.id,
-                            },
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((_) => {
-                        return Project.findOne(
-                          {
-                            include: [
-                              {
-                                model: ProjectOffer,
-                                as: "projectoffers",
-                                where: { id: req.body.offer_id },
-                                include: {
-                                  model: User,
-                                  as: "client",
-                                },
-                              },
-                              {
-                                model: User,
-                                as: "owner",
-                              },
-                            ],
-                            where: {
-                              id: req.params.id,
-                            },
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((proj) => {
-                        proj_details = proj;
-                        return Notification.create(
-                          {
-                            title: "Project Completed",
-                            description: `project ${proj.proj_title} was completed please check your wallets`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "project_cancel_update_status"
+      );
 
-                        var promises = [];
-                        proj_details.projectoffers.map((a) => {
-                          var newPromise = ReadNotification.create(
-                            {
-                              notification_id: notify.id,
-                              receiver_id: a.user_offered_id,
-                            },
-                            { transaction: t }
-                          );
-                          promises.push(newPromise);
-                        });
+      if (!req.params.id || !req.body.offer_id)
+        return handleResponse(res, "Please Pass Required Fields.", 400);
 
-                        const ownerPromise = ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: proj_details.user_added_id,
-                          },
-                          { transaction: t }
-                        );
-                        promises.push(ownerPromise);
-
-                        return Promise.all(promises);
-                      });
-                  })
-                  .then((_) => {
-                    proj_details.projectoffers.map((a) => {
-                      sendNotification(
-                        notifiyUser.title,
-                        notifiyUser.description,
-                        "test"
-                      ).then((_) => {
-                        console.log(`message sent ${a.user_offered_id}`);
-                      });
-                    });
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    ).then((_) => {
-                      console.log(`message sent ${proj_details.user_added_id}`);
-                    });
-                    // Transaction has been committed
-                    // result is whatever the result of the promise chain returned to the transaction callback
-                    res.status(200).send({
-                      msg: "Resourse updated",
-                    });
-                  })
-                  .catch((err) => {
-                    // Transaction has been rolled back
-                    // err is whatever rejected the promise chain returned to the transaction callback
-                    console.log(err);
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({
-                msg: error,
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
-        });
+      const request = await ProjectCompletedRequest.findOne({
+        where: {
+          proj_id: req.params.id,
+          offer_id: req.body.offer_id,
+        },
       });
+
+      if (!request) return handleResponse(res, "Request Not Found.", 404);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        await ProjectCompletedRequest.update(
+          {
+            approved: true,
+          },
+          {
+            where: {
+              id: request.id,
+            },
+          },
+          { transaction: t }
+        );
+        const completeStatus = await ProjStatus.findOne(
+          {
+            where: {
+              stat_name: "Completed",
+            },
+          },
+          { transaction: t }
+        );
+        await Project.update(
+          {
+            proj_status_id: completeStatus.id,
+          },
+          {
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        const projectDetails = await Project.findOne(
+          {
+            include: [
+              {
+                model: ProjectOffer,
+                as: "projectoffers",
+                where: { id: req.body.offer_id },
+                include: {
+                  model: User,
+                  as: "client",
+                },
+              },
+              {
+                model: User,
+                as: "owner",
+              },
+            ],
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        const notify = await Notification.create(
+          {
+            title: "Project Completed",
+            description: `project ${projectDetails.proj_title} was completed please check your wallets`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+
+        var promises = [];
+        projectDetails.projectoffers.map((a) => {
+          var newPromise = ReadNotification.create(
+            {
+              notification_id: notify.id,
+              receiver_id: a.user_offered_id,
+            },
+            { transaction: t }
+          );
+          promises.push(newPromise);
+        });
+
+        const ownerPromise = ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: projectDetails.user_added_id,
+          },
+          { transaction: t }
+        );
+        promises.push(ownerPromise);
+
+        await Promise.all(promises);
+
+        projectDetails.projectoffers.map(async (a) => {
+          await sendNotification(notify.title, notify.description, "test");
+        });
+        await sendNotification(notify.title, notify.description, "test");
+
+        return handleResponse(res, "Resources Updated Successfully.", 200);
+      });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
@@ -1532,255 +1479,190 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "project_cancel_update_status")
-      .then((rolePerm) => {
-        if (!req.params.id || !req.body.offer_id) {
-          res.status(400).send({
-            msg: "missing fields please add required info.",
-          });
-        } else {
-          ProjectCompletedRequest.findOne({
-            where: {
-              proj_id: req.params.id,
-              offer_id: req.body.offer_id,
-            },
-          })
-            .then((request) => {
-              if (request) {
-                let proj_details = {};
-                let notifiyUser = {};
-                sequelize
-                  .transaction((t) => {
-                    // chain all your queries here. make sure you return them.
-                    return Project.findOne(
-                      {
-                        include: [
-                          {
-                            model: ProjectOffer,
-                            as: "projectoffers",
-                            where: { id: req.body.offer_id },
-                            include: [
-                              {
-                                model: User,
-                                as: "client",
-                              },
-                              {
-                                model: CommissionRate,
-                                as: "commissionRate",
-                              },
-                            ],
-                          },
-                          {
-                            model: User,
-                            as: "owner",
-                          },
-                        ],
-                        where: {
-                          id: req.params.id,
-                        },
-                      },
-                      { transaction: t }
-                    )
-                      .then((proj) => {
-                        proj_details = proj;
-                        const talentPromise = Transactions.create(
-                          {
-                            beneficiary_id: proj.projectoffers[0].client.id,
-                            type: "dr",
-                            amount: proj.projectoffers[0].price,
-                            message: `${proj.projectoffers[0].price} have been added to your account for completing ${proj.proj_title} check your wallet`,
-                            user_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                        const ownerPromise = Transactions.create(
-                          {
-                            beneficiary_id: proj.owner.id,
-                            type: "cr",
-                            amount: proj.projectoffers[0].price,
-                            message: `${proj.projectoffers[0].price} have been withdrawn from your account for completing ${proj.proj_title} as project expense check your wallet`,
-                            user_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                        return Promise.all([talentPromise, ownerPromise]);
-                      })
-                      .then((_) => {
-                        return ProjectCompletedRequest.update(
-                          {
-                            is_transfered: true,
-                          },
-                          {
-                            where: {
-                              id: request.id,
-                            },
-                          }
-                        );
-                      })
-                      .then((_) => {
-                        return UserWallet.findOne({
-                          where: {
-                            user_id: proj_details.projectoffers[0].client.id,
-                          },
-                        });
-                      })
-                      .then((wallet) => {
-                        let ratePercent = 0;
-                        let amount = 0;
-                        if (wallet) {
-                          ratePercent =
-                            proj_details.projectoffers[0].commissionRate
-                              .ratepercent;
-                          amount =
-                            (proj_details.projectoffers[0].price *
-                              ratePercent) /
-                            100;
-                          return UserWallet.update(
-                            {
-                              credit: wallet.credit + amount,
-                            },
-                            {
-                              where: {
-                                id: wallet.id,
-                              },
-                            },
-                            { transaction: t }
-                          );
-                        } else {
-                          ratePercent =
-                            proj_details.projectoffers[0].commissionRate
-                              .ratepercent;
-                          amount =
-                            (proj_details.projectoffers[0].price *
-                              ratePercent) /
-                            100;
-                          return UserWallet.create(
-                            {
-                              user_id: proj_details.projectoffers[0].client.id,
-                              credit: amount,
-                            },
-                            { transaction: t }
-                          );
-                        }
-                      })
-                      .then((_) => {
-                        return UserWallet.findOne({
-                          where: {
-                            user_id: proj_details.owner.id,
-                          },
-                        });
-                      })
-                      .then((wallet) => {
-                        if (wallet) {
-                          return UserWallet.update(
-                            {
-                              credit:
-                                wallet.credit -
-                                proj_details.projectoffers[0].price,
-                            },
-                            {
-                              where: {
-                                id: wallet.id,
-                              },
-                            },
-                            { transaction: t }
-                          );
-                        } else {
-                          return UserWallet.create(
-                            {
-                              user_id: proj_details.owner.id,
-                              credit: -proj_details.projectoffers[0].price,
-                            },
-                            { transaction: t }
-                          );
-                        }
-                      })
-                      .then((_) => {
-                        return Notification.create(
-                          {
-                            title: "Money Transfer",
-                            description: `project ${proj_details.proj_title} was completed please check your wallets`,
-                            type: "admin-to-user",
-                            sender_id: req.user.id,
-                          },
-                          { transaction: t }
-                        );
-                      })
-                      .then((notify) => {
-                        notifiyUser = notify;
+  async function (req, res) {
+    try {
+      await helper.checkPermission(
+        req.user.role_id,
+        "project_cancel_update_status"
+      );
 
-                        var promises = [];
-                        proj_details.projectoffers.map((a) => {
-                          console.log(JSON.stringify(a));
-                          var newPromise = ReadNotification.create(
-                            {
-                              notification_id: notify.id,
-                              receiver_id: a.user_offered_id,
-                            },
-                            { transaction: t }
-                          );
-                          promises.push(newPromise);
-                        });
+      if (!req.params.id || !req.body.offer_id)
+        return handleResponse(res, "Please Pass Required Fields.", 400);
 
-                        const ownerPromise = ReadNotification.create(
-                          {
-                            notification_id: notify.id,
-                            receiver_id: proj_details.user_added_id,
-                          },
-                          { transaction: t }
-                        );
-                        promises.push(ownerPromise);
-
-                        return Promise.all(promises);
-                      });
-                  })
-                  .then((_) => {
-                    proj_details.projectoffers.map((a) => {
-                      sendNotification(
-                        notifiyUser.title,
-                        notifiyUser.description,
-                        "test"
-                      ).then((_) => {
-                        console.log(`message sent ${a.user_offered_id}`);
-                      });
-                    });
-                    sendNotification(
-                      notifiyUser.title,
-                      notifiyUser.description,
-                      "test"
-                    ).then((_) => {
-                      console.log(`message sent ${proj_details.user_added_id}`);
-                    });
-                    res.status(200).send({
-                      msg: "Resourse updated",
-                    });
-                  })
-                  .catch((err) => {
-                    res.status(500).send({
-                      msg: err,
-                    });
-                  });
-              } else {
-                res.status(404).send({
-                  msg: "request not found",
-                });
-              }
-            })
-            .catch((error) => {
-              res.status(500).send({
-                msg: error,
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
-        });
+      const request = await ProjectCompletedRequest.findOne({
+        where: {
+          proj_id: req.params.id,
+          offer_id: req.body.offer_id,
+        },
       });
+      if (!request) return handleResponse(res, "Request Not Found.", 404);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const projectDetails = await Project.findOne(
+          {
+            include: [
+              {
+                model: ProjectOffer,
+                as: "projectoffers",
+                where: { id: req.body.offer_id },
+                include: [
+                  {
+                    model: User,
+                    as: "client",
+                  },
+                  {
+                    model: CommissionRate,
+                    as: "commissionRate",
+                  },
+                ],
+              },
+              {
+                model: User,
+                as: "owner",
+              },
+            ],
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        const talentPromise = Transactions.create(
+          {
+            beneficiary_id: projectDetails.projectoffers[0].client.id,
+            type: "dr",
+            amount: projectDetails.projectoffers[0].price,
+            message: `${projectDetails.projectoffers[0].price} have been added to your account for completing ${projectDetails.proj_title} check your wallet`,
+            user_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        const ownerPromise = Transactions.create(
+          {
+            beneficiary_id: projectDetails.owner.id,
+            type: "cr",
+            amount: projectDetails.projectoffers[0].price,
+            message: `${projectDetails.projectoffers[0].price} have been withdrawn from your account for completing ${projectDetails.proj_title} as project expense check your wallet`,
+            user_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await Promise.all([talentPromise, ownerPromise]);
+        await ProjectCompletedRequest.update(
+          {
+            is_transfered: true,
+          },
+          {
+            where: {
+              id: request.id,
+            },
+          }
+        );
+        const wallet = UserWallet.findOne({
+          where: {
+            user_id: projectDetails.projectoffers[0].client.id,
+          },
+        });
+        let ratePercent = 0;
+        let amount = 0;
+        if (wallet) {
+          ratePercent =
+            projectDetails.projectoffers[0].commissionRate.ratepercent;
+          amount = (projectDetails.projectoffers[0].price * ratePercent) / 100;
+          await UserWallet.update(
+            {
+              credit: wallet.credit + amount,
+            },
+            {
+              where: {
+                id: wallet.id,
+              },
+            },
+            { transaction: t }
+          );
+        } else {
+          ratePercent =
+            projectDetails.projectoffers[0].commissionRate.ratepercent;
+          amount = (projectDetails.projectoffers[0].price * ratePercent) / 100;
+          await UserWallet.create(
+            {
+              user_id: projectDetails.projectoffers[0].client.id,
+              credit: amount,
+            },
+            { transaction: t }
+          );
+        }
+        const ownerWallet = await UserWallet.findOne({
+          where: {
+            user_id: projectDetails.owner.id,
+          },
+        });
+        if (ownerWallet) {
+          await UserWallet.update(
+            {
+              credit:
+                ownerWallet.credit - projectDetails.projectoffers[0].price,
+            },
+            {
+              where: {
+                id: ownerWallet.id,
+              },
+            },
+            { transaction: t }
+          );
+        } else {
+          await UserWallet.create(
+            {
+              user_id: projectDetails.owner.id,
+              credit: -projectDetails.projectoffers[0].price,
+            },
+            { transaction: t }
+          );
+        }
+        const notify = await Notification.create(
+          {
+            title: "Money Transfer",
+            description: `project ${projectDetails.proj_title} was completed please check your wallets`,
+            type: "admin-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+
+        var promises = [];
+        projectDetails.projectoffers.map((a) => {
+          var newPromise = ReadNotification.create(
+            {
+              notification_id: notify.id,
+              receiver_id: a.user_offered_id,
+            },
+            { transaction: t }
+          );
+          promises.push(newPromise);
+        });
+
+        const ownerReadPromise = ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: projectDetails.user_added_id,
+          },
+          { transaction: t }
+        );
+        promises.push(ownerReadPromise);
+
+        await Promise.all(promises);
+
+        projectDetails.projectoffers.map(async (a) => {
+          await sendNotification(notify.title, notify.description, "test");
+        });
+        await sendNotification(notify.title, notify.description, "test");
+
+        return handleResponse(res, "Resources Updated Successfully.");
+      });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 module.exports = router;

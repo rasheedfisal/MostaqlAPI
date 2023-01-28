@@ -4,6 +4,7 @@ const PriceRange = require("../models").PriceRange;
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
+
 const helper = new Helper();
 
 // Create a new Price Range
