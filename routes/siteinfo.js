@@ -5,6 +5,7 @@ const {
   PaypalSetting,
   PrivacyPolicy,
   WithdrawableAmountSetting,
+  CommissionRate,
 } = require("../models");
 
 /////// paypal /////////
@@ -47,6 +48,17 @@ router.get("/withdraw", function (req, res) {
 router.get("/contact", function (req, res) {
   ContactUs.findOne()
     .then((item) => res.status(200).send(item))
+    .catch((error) => {
+      res.status(500).send({
+        success: false,
+        msg: error,
+      });
+    });
+});
+/////////// current commission rate //////////
+router.get("/currentrate", function (req, res) {
+  CommissionRate.findOne({ where: { iscurrent: true } })
+    .then((rate) => res.status(200).send(rate))
     .catch((error) => {
       res.status(500).send({
         success: false,
