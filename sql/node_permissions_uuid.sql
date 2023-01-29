@@ -97,6 +97,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'privacy_policy_setting', 'Add Privacy Policy Details', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_amount_setting', 'Add Minimum Withdrawable Amount', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'contactus_setting', 'Add Contact Us Information', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'creditcard_setting', 'Add Credit Card Information', now(), now());
 ------------------- Payments-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_add', 'Request Account Feed', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_get_all', 'Get All Account Feed Requests', now(), now());

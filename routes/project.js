@@ -1608,7 +1608,8 @@ router.put(
           await UserWallet.update(
             {
               credit:
-                ownerWallet.credit - projectDetails.projectoffers[0].price,
+                ownerWallet.credit -
+                (projectDetails.projectoffers[0].price + discountAmount),
             },
             {
               where: {

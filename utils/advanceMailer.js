@@ -1,6 +1,7 @@
 var path = require("path");
 var EmailTemplates = require("swig-email-templates");
 var emailProcessor = require("./mailingProcessor");
+const { USDollarFormatter } = require("./currencyFormatter");
 
 var options = {
   root: path.join(__dirname, "..", "emailTemplates"),
@@ -133,7 +134,7 @@ module.exports = {
         requestName,
         requestId,
         description,
-        amount,
+        amount: USDollarFormatter(amount),
         datetime: dateTime,
         attachment,
       };

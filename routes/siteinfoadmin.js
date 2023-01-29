@@ -5,6 +5,7 @@ const {
   PaypalSetting,
   PrivacyPolicy,
   WithdrawableAmountSetting,
+  AdminCardInfo,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -180,6 +181,78 @@ router.post(
                 })
               );
           })
+          .catch((error) => {
+            res.status(500).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+/////////// Credit Card //////////
+router.post(
+  "/creditcard",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "creditcard_setting")
+      .then((rolePerm) => {
+        AdminCardInfo.destroy({
+          where: {},
+        })
+          .then((_) => {
+            AdminCardInfo.create({
+              name: req.body.name,
+              number: req.body.number,
+              expiry: req.body.expiry,
+              cvc: req.body.cvc,
+              issuer: req.body.issuer,
+            })
+              .then((_) => res.status(200).send({ msg: "Resourse updated" }))
+              .catch((err) =>
+                res.status(500).send({
+                  success: false,
+                  msg: err,
+                })
+              );
+          })
+          .catch((error) => {
+            res.status(500).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+router.get(
+  "/creditcard",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    helper
+      .checkPermission(req.user.role_id, "creditcard_setting")
+      .then((rolePerm) => {
+        AdminCardInfo.findOne()
+          .then((card) => res.status(200).send(card))
           .catch((error) => {
             res.status(500).send({
               success: false,
