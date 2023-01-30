@@ -343,6 +343,7 @@ router.put(
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
@@ -397,11 +398,12 @@ router.put(
             where: {
               id: request.id,
             },
-          }
+          },
+          { transaction: t }
         );
         const wallet = await UserWallet.findOne({
           where: {
-            user_id: reqUser.id,
+            user_id: user[0].id,
           },
         });
         if (wallet) {
@@ -419,7 +421,7 @@ router.put(
         } else {
           await UserWallet.create(
             {
-              user_id: reqUser.id,
+              user_id: user[0].id,
               credit: request.amount,
             },
             { transaction: t }
@@ -445,6 +447,7 @@ router.put(
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
@@ -873,11 +876,12 @@ router.put(
             where: {
               id: request.id,
             },
-          }
+          },
+          { transaction: t }
         );
         const wallet = await UserWallet.findOne({
           where: {
-            user_id: reqUser.id,
+            user_id: user[0].id,
           },
         });
         if (wallet) {
