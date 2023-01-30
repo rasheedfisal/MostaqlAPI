@@ -472,7 +472,7 @@ router.post(
       if (!req.body.amount || !req.body.email)
         return handleResponse(res, "Please Pass Required Fields.", 400);
 
-      const isTrue = await isUserHaveMinimumAmount();
+      const isTrue = await isUserHaveMinimumAmount(req.user.id);
       if (!isTrue)
         return handleResponse(res, "User Doesn't have Sufficient Credit.", 400);
 
@@ -559,7 +559,7 @@ router.post(
       )
         return handleResponse(res, "Please Pass Required Fields.", 400);
 
-      const isTrue = await isUserHaveMinimumAmount();
+      const isTrue = await isUserHaveMinimumAmount(req.user.id);
       if (!isTrue)
         return handleResponse(res, "User Doesn't have Sufficient Credit", 400);
 
