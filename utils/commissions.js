@@ -28,28 +28,20 @@ module.exports = {
 
     return result;
   },
-  isUserHaveMinimumAmount: (id) => {
-    const result = WithdrawableAmountSetting.findOne()
-      .then((withdrawable) => {
-        UserWallet.findOne({
-          where: {
-            user_id: id,
-          },
-        })
-          .then((wallet) => {
-            if (wallet.credit >= withdrawable.amount) {
-              return true;
-            }
-            return false;
-          })
-          .catch((_) => {
-            return false;
-          });
-      })
-      .catch((_) => {
-        return false;
+  isUserHaveMinimumAmount: async (id) => {
+    try {
+      const withdrawable = await WithdrawableAmountSetting.findOne();
+      const wallet = await UserWallet.findOne({
+        where: {
+          user_id: id,
+        },
       });
-
-    return result;
+      if (wallet.credit >= withdrawable.amount) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
   },
 };

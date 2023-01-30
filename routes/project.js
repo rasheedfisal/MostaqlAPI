@@ -1581,7 +1581,7 @@ router.put(
         if (wallet) {
           await UserWallet.update(
             {
-              credit: wallet.credit + amount,
+              credit: +wallet.credit + +amount,
             },
             {
               where: {
@@ -1609,7 +1609,7 @@ router.put(
             {
               credit:
                 ownerWallet.credit -
-                (projectDetails.projectoffers[0].price + discountAmount),
+                (+projectDetails.projectoffers[0].price + +discountAmount),
             },
             {
               where: {

@@ -373,7 +373,7 @@ router.put(
         const user = await sequelize.query(
           "select * from users where id = (select user_id from useraccountfeedrequests where id= :feedId)",
           {
-            replacements: { feedId: req.params.id },
+            replacements: { feedId: request.id },
             type: QueryTypes.SELECT,
             model: User,
             mapToModel: true,
@@ -401,15 +401,18 @@ router.put(
           },
           { transaction: t }
         );
-        const wallet = await UserWallet.findOne({
-          where: {
-            user_id: user[0].id,
+        const wallet = await UserWallet.findOne(
+          {
+            where: {
+              user_id: user[0].id,
+            },
           },
-        });
+          { transaction: t }
+        );
         if (wallet) {
           await UserWallet.update(
             {
-              credit: wallet.credit - request.amount,
+              credit: +wallet.credit + +request.amount,
             },
             {
               where: {
@@ -473,6 +476,7 @@ router.post(
         return handleResponse(res, "Please Pass Required Fields.", 400);
 
       const isTrue = await isUserHaveMinimumAmount(req.user.id);
+
       if (!isTrue)
         return handleResponse(res, "User Doesn't have Sufficient Credit.", 400);
 
@@ -879,11 +883,14 @@ router.put(
           },
           { transaction: t }
         );
-        const wallet = await UserWallet.findOne({
-          where: {
-            user_id: user[0].id,
+        const wallet = await UserWallet.findOne(
+          {
+            where: {
+              user_id: user[0].id,
+            },
           },
-        });
+          { transaction: t }
+        );
         if (wallet) {
           await UserWallet.update(
             {
@@ -921,14 +928,11 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(
-          notifiyUser.title,
-          notifiyUser.description,
-          "test"
-        );
-        return handleResponse(res, "Resources Updated Successfully.");
+        await sendNotification(notify.title, notify.description, "test");
+        return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
