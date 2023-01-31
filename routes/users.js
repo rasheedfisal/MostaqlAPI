@@ -10,6 +10,7 @@ const {
   Portfolio,
   UserReviews,
   Project,
+  UserWallet,
 } = require("../models");
 const multer = require("multer");
 const passport = require("passport");
@@ -358,6 +359,10 @@ router.post(
               ],
             },
             {
+              model: UserWallet,
+              as: "wallet",
+            },
+            {
               model: UserReviews,
               attributes: ["comment", "star_rate", "createdAt"],
               as: "talentreview",
@@ -444,6 +449,10 @@ router.post(
                 "url_link",
                 "createdAt",
               ],
+            },
+            {
+              model: UserWallet,
+              as: "wallet",
             },
             {
               model: UserReviews,
