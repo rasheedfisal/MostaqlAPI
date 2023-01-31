@@ -9,7 +9,6 @@ const {
   UserWallet,
   Notification,
   ReadNotification,
-  WithdrawableAmountSetting,
   User,
   Role,
   Transactions,
@@ -136,14 +135,6 @@ router.post(
           promises.push(newPromise);
         });
         await Promise.all(promises);
-
-        // var emailPromises = [];
-
-        // users.map((a) => {
-        //   var newPromise = ;
-        //   emailPromises.push(newPromise);
-        // });
-        // await Promise.all(emailPromises);
 
         await sendEmailRequest({
           req,
@@ -532,6 +523,17 @@ router.post(
           promises.push(newPromise);
         });
         await Promise.all(promises);
+
+        await sendEmailRequest({
+          req,
+          path: req.file?.path,
+          name: "Staff Members",
+          requestName: notify.title,
+          requestId: request.id,
+          description: notify.description,
+          amount: request.amount,
+          email: users.map((a) => a.email),
+        });
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
@@ -621,6 +623,17 @@ router.post(
           promises.push(newPromise);
         });
         await Promise.all(promises);
+
+        await sendEmailRequest({
+          req,
+          path: req.file?.path,
+          name: "Staff Members",
+          requestName: notify.title,
+          requestId: request.id,
+          description: notify.description,
+          amount: request.amount,
+          email: users.map((a) => a.email),
+        });
         return handleResponse(res, "Resourse created Successfully", 201);
       });
     } catch (error) {

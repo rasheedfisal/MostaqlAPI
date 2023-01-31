@@ -24,6 +24,7 @@ const { getPath } = require("../utils/fileUrl");
 const { getCurrentRate } = require("../utils/commissions");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { QueryTypes } = require("sequelize");
+const { handleForbidden, handleResponse } = require("../utils/handleError");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -178,6 +179,108 @@ router.post(
   }
 );
 
+// Update Offer
+router.put(
+  "/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "project_offer_update");
+
+      if (!req.params.id || !req.body.price)
+        return handleResponse(
+          res,
+          "missing fields please add required info.",
+          400
+        );
+
+      const offer = await ProjectOffer.findOne({
+        include: [
+          {
+            model: Project,
+            include: {
+              model: User,
+              as: "owner",
+              include: {
+                model: UserWallet,
+                as: "wallet",
+              },
+            },
+          },
+          {
+            model: CommissionRate,
+            as: "commissionRate",
+          },
+        ],
+        where: {
+          id: req.params.id,
+        },
+      });
+      if (offer.user_added_id !== req.user.id)
+        return handleResponse(res, "This User is Not the Project Owner.", 400);
+      if (offer.Project.owner.wallet === null)
+        return handleResponse(res, "Wallet is Empty.", 400);
+
+      const ratePercent = offer.commissionRate.ratepercent;
+      const discountAmount = (offer.price * ratePercent) / 100;
+      const fullAmount = req.body.price + discountAmount;
+      if (offer.Project.owner.wallet?.credit < fullAmount)
+        return handleResponse(res, "Credit is Insufficient.", 400);
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+
+        await ProjectOffer.update(
+          {
+            price: req.body.price,
+          },
+          {
+            where: {
+              id: offer.id,
+            },
+          },
+          { transaction: t }
+        );
+        const user = sequelize.query(
+          "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
+          {
+            replacements: { reqId: offer.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        const proj = await Project.findByPk(offer.proj_id, {
+          transaction: t,
+        });
+        const notify = await Notification.create(
+          {
+            title: "Owner Changed Price",
+            description: `hello ${user[0].fullname} project owner ${req.user.fullname} changed your offer price for project ${proj.proj_title} the price is now ${req.body.price}`,
+            type: "user-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+
+        await sendNotification(notify.title, notify.description, user[0].email);
+
+        return handleResponse(res, "Resource Updated Successfully.", 200);
+      });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
+  }
+);
 // Get the Project List of Offers
 router.get(
   "/project/:id",
@@ -252,181 +355,128 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "update_offer_status")
-      .then((rolePerm) => {
-        if (!req.params.id || !req.body.proj_id) {
-          res.status(400).send({
-            msg: "missing fields please add required info.",
-          });
-        } else {
-          ProjectOffer.findOne({
-            include: [
-              {
-                model: Project,
-                include: {
-                  model: User,
-                  as: "owner",
-                  include: {
-                    model: UserWallet,
-                    as: "wallet",
-                  },
-                },
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "update_offer_status");
+
+      if (!req.params.id || !req.body.proj_id)
+        return handleResponse(
+          res,
+          "missing fields please add required info.",
+          400
+        );
+
+      const offer = await ProjectOffer.findOne({
+        include: [
+          {
+            model: Project,
+            include: {
+              model: User,
+              as: "owner",
+              include: {
+                model: UserWallet,
+                as: "wallet",
               },
-              {
-                model: CommissionRate,
-                as: "commissionRate",
-              },
-            ],
+            },
+          },
+          {
+            model: CommissionRate,
+            as: "commissionRate",
+          },
+        ],
+        where: {
+          id: req.params.id,
+        },
+      });
+
+      if (offer.Project.owner.wallet === null)
+        return handleResponse(res, "Wallet is Empty.", 400);
+
+      const ratePercent = offer.commissionRate.ratepercent;
+      const discountAmount = (offer.price * ratePercent) / 100;
+      const fullAmount = offer.price + discountAmount;
+      if (offer.Project.owner.wallet?.credit < fullAmount)
+        return handleResponse(res, "Credit is Insufficient.", 400);
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const stat = await ProjStatus.findOne(
+          {
+            where: {
+              stat_name: "In-Progress",
+            },
+          },
+          { transaction: t }
+        );
+        await Project.update(
+          {
+            proj_status_id: stat.id,
+          },
+          {
+            where: {
+              id: req.body.proj_id,
+            },
+          },
+          { transaction: t }
+        );
+        await ProjectOffer.update(
+          {
+            accept_status: false,
+          },
+          {
+            where: {
+              proj_id: req.body.proj_id,
+            },
+          },
+          { transaction: t }
+        );
+        await ProjectOffer.update(
+          {
+            accept_status: true,
+          },
+          {
             where: {
               id: req.params.id,
             },
-          })
-            .then((offer) => {
-              if (offer.Project.owner.wallet === null) {
-                return res.status(400).send({
-                  msg: "Wallet is Empty.",
-                });
-              }
-              const ratePercent = offer.commissionRate.ratepercent;
-              const discountAmount = (offer.price * ratePercent) / 100;
-              const fullAmount = offer.price + discountAmount;
-              if (offer.Project.owner.wallet?.credit < fullAmount) {
-                return res.status(400).send({
-                  msg: "Credit is Insufficient.",
-                });
-              }
-              let notifiyUser = {};
-              let reqUser = {};
-              sequelize
-                .transaction((t) => {
-                  // chain all your queries here. make sure you return them.
-                  return ProjStatus.findOne(
-                    {
-                      where: {
-                        stat_name: "In-Progress",
-                      },
-                    },
-                    { transaction: t }
-                  )
-                    .then((stat) => {
-                      return Project.update(
-                        {
-                          proj_status_id: stat.id,
-                        },
-                        {
-                          where: {
-                            id: req.body.proj_id,
-                          },
-                        },
-                        { transaction: t }
-                      );
-                    })
-                    .then((_) => {
-                      return ProjectOffer.update(
-                        {
-                          accept_status: false,
-                        },
-                        {
-                          where: {
-                            proj_id: req.body.proj_id,
-                          },
-                        },
-                        { transaction: t }
-                      );
-                    })
-                    .then((_) => {
-                      return ProjectOffer.update(
-                        {
-                          accept_status: true,
-                        },
-                        {
-                          where: {
-                            id: req.params.id,
-                          },
-                        },
-                        { transaction: t }
-                      );
-                    })
-                    .then((_) => {
-                      return sequelize.query(
-                        "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
-                        {
-                          replacements: { reqId: req.params.id },
-                          type: QueryTypes.SELECT,
-                          model: User,
-                          mapToModel: true,
-                        },
-                        { transaction: t }
-                      );
-                    })
-                    .then((user) => {
-                      reqUser = user[0];
-                      return Project.findByPk(req.body.proj_id, {
-                        transaction: t,
-                      });
-                    })
-                    .then((proj) => {
-                      return Notification.create(
-                        {
-                          title: "Project In Progress",
-                          description: `congratulations ${reqUser.fullname} project owner ${req.user.fullname} choosed you for project ${proj.proj_title} get ready`,
-                          type: "user-to-user",
-                          sender_id: req.user.id,
-                        },
-                        { transaction: t }
-                      );
-                    })
-                    .then((notify) => {
-                      notifiyUser = notify;
-                      return ReadNotification.create(
-                        {
-                          notification_id: notify.id,
-                          receiver_id: reqUser.id,
-                        },
-                        { transaction: t }
-                      );
-                    });
-                })
-                .then((_) => {
-                  sendNotification(
-                    notifiyUser.title,
-                    notifiyUser.description,
-                    reqUser.email
-                  )
-                    .then((_) => {
-                      res.status(200).send({
-                        msg: "Resourse Updated Successfully",
-                      });
-                    })
-                    .catch((error) => {
-                      res.status(500).send({
-                        msg: "the status has changed but the notification was not sent please resend from the notification page",
-                      });
-                    });
-                })
-                .catch((err) => {
-                  // Transaction has been rolled back
-                  // err is whatever rejected the promise chain returned to the transaction callback
-                  res.status(500).send({
-                    msg: err,
-                  });
-                });
-            })
-            .catch((error) => {
-              res.status(500).send({
-                msg: "Internal Server Error",
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
+          },
+          { transaction: t }
+        );
+        const user = sequelize.query(
+          "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
+          {
+            replacements: { reqId: req.params.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        const proj = await Project.findByPk(req.body.proj_id, {
+          transaction: t,
         });
+        const notify = await Notification.create(
+          {
+            title: "Project In Progress",
+            description: `congratulations ${user[0].fullname} project owner ${req.user.fullname} choosed you for project ${proj.proj_title} get ready`,
+            type: "user-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+
+        await sendNotification(notify.title, notify.description, user[0].email);
+
+        return handleResponse(res, "Resource Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 // update offer complete status
@@ -435,135 +485,92 @@ router.put(
   passport.authenticate("jwt", {
     session: false,
   }),
-  function (req, res) {
-    helper
-      .checkPermission(req.user.role_id, "update_offer_status")
-      .then((rolePerm) => {
-        if (!req.params.id) {
-          res.status(400).send({
-            msg: "missing fields please add required info.",
-          });
-        } else {
-          let reqUser = {};
-          let notifiyUser = {};
-          let userOffer = {};
-          sequelize
-            .transaction((t) => {
-              // chain all your queries here. make sure you return them.
-              return ProjStatus.findOne(
-                {
-                  where: {
-                    stat_name: "Completed",
-                  },
-                },
-                { transaction: t }
-              )
-                .then((stat) => {
-                  return Project.update(
-                    {
-                      proj_status_id: stat.id,
-                    },
-                    {
-                      where: {
-                        id: req.params.id,
-                      },
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((_) => {
-                  return ProjectOffer.findOne(
-                    {
-                      where: {
-                        proj_id: req.params.id,
-                        accept_status: true,
-                      },
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((offer) => {
-                  userOffer = offer;
-                  return ProjectCompletedRequest.create(
-                    {
-                      proj_id: req.params.id,
-                      offer_id: offer.id,
-                    },
-                    { transaction: t }
-                  );
-                })
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "update_offer_status");
 
-                .then((_) => {
-                  return sequelize.query(
-                    "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
-                    {
-                      replacements: { reqId: userOffer.id },
-                      type: QueryTypes.SELECT,
-                      model: User,
-                      mapToModel: true,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((user) => {
-                  reqUser = user[0];
-                  return Project.findByPk(req.params.id, { transaction: t });
-                })
-                .then((proj) => {
-                  return Notification.create(
-                    {
-                      title: "Project Completed",
-                      description: `congratulations ${reqUser.fullname} project owner ${req.user.fullname} marked project ${proj.proj_title} as completed please wait for the authorized personnel to validate the project details, please check the project complete request page`,
-                      type: "user-to-user",
-                      sender_id: req.user.id,
-                    },
-                    { transaction: t }
-                  );
-                })
-                .then((notify) => {
-                  notifiyUser = notify;
-                  return ReadNotification.create(
-                    {
-                      notification_id: notify.id,
-                      receiver_id: reqUser.id,
-                    },
-                    { transaction: t }
-                  );
-                });
-            })
-            .then((_) => {
-              sendNotification(
-                notifiyUser.title,
-                notifiyUser.description,
-                "test"
-              )
-                .then((_) => {
-                  res.status(200).send({
-                    msg: "Resourse Updated Successfully",
-                  });
-                })
-                .catch((_) => {
-                  res.status(500).send({
-                    msg: "the status has changed but the notification was not sent please resend from the notification page",
-                  });
-                });
-            })
-            .catch((err) => {
-              console.log(err);
-              // Transaction has been rolled back
-              // err is whatever rejected the promise chain returned to the transaction callback
-              res.status(500).send({
-                msg: err,
-              });
-            });
-        }
-      })
-      .catch((error) => {
-        res.status(403).send({
-          success: false,
-          msg: error,
-        });
+      if (!req.params.id)
+        return handleResponse(
+          res,
+          "missing fields please add required info.",
+          400
+        );
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+        const stat = await ProjStatus.findOne(
+          {
+            where: {
+              stat_name: "Completed",
+            },
+          },
+          { transaction: t }
+        );
+
+        await Project.update(
+          {
+            proj_status_id: stat.id,
+          },
+          {
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        const offer = await ProjectOffer.findOne(
+          {
+            where: {
+              proj_id: req.params.id,
+              accept_status: true,
+            },
+          },
+          { transaction: t }
+        );
+        await ProjectCompletedRequest.create(
+          {
+            proj_id: req.params.id,
+            offer_id: offer.id,
+          },
+          { transaction: t }
+        );
+
+        const user = await sequelize.query(
+          "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
+          {
+            replacements: { reqId: offer.id },
+            type: QueryTypes.SELECT,
+            model: User,
+            mapToModel: true,
+          },
+          { transaction: t }
+        );
+        const proj = await Project.findByPk(req.params.id, { transaction: t });
+        const notify = await Notification.create(
+          {
+            title: "Project Completed",
+            description: `congratulations ${user[0].fullname} project owner ${req.user.fullname} marked project ${proj.proj_title} as completed please wait for the authorized personnel to validate the project details, please check the project complete request page`,
+            type: "user-to-user",
+            sender_id: req.user.id,
+          },
+          { transaction: t }
+        );
+
+        await ReadNotification.create(
+          {
+            notification_id: notify.id,
+            receiver_id: user[0].id,
+          },
+          { transaction: t }
+        );
+
+        await sendNotification(notify.title, notify.description, "test");
+
+        return handleResponse(res, "Resource Updated Successfully.", 200);
       });
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
