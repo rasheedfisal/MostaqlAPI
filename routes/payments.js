@@ -83,11 +83,7 @@ router.post(
       );
 
       if (!req.body.amount)
-        return handleResponse(
-          res,
-          "Please pass Role ID, email, password, phone or fullname.",
-          400
-        );
+        return handleResponse(res, "Please pass Required Fields.", 400);
 
       await sequelize.transaction(async (t) => {
         // chain all your queries here. make sure you return them.
@@ -150,7 +146,6 @@ router.post(
         return handleResponse(res, "Resources Created Successfully", 201);
       });
     } catch (error) {
-      console.log(error);
       return handleForbidden(res, error);
     }
   }

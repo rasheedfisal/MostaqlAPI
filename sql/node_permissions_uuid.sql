@@ -86,6 +86,12 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 ------------------- Conversations-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'conversation_add', 'save message between sender and reciever', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_conversation_get_all', 'get all message between sender and reciever', now(), now());
+
+------------------- Notifications-------------------
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'notification_add', 'Add Notification', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'user_conversation_get_all', 'get all message between sender and reciever', now(), now());
+
+
 ------------------- Support Box-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'support_box_add', 'Add Complain or Suggestion', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'support_box_get_all', 'get all Complains and Suggestions', now(), now());
