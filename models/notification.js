@@ -16,7 +16,10 @@ module.exports = (sequelize, DataTypes) => {
       });
       Notification.belongsTo(models.User, {
         foreignKey: "sender_id",
-        as: "Users",
+      });
+      Notification.hasMany(models.ReadNotification, {
+        foreignKey: "notification_id",
+        as: "AllReadNotification",
       });
     }
   }

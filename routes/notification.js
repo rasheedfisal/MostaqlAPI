@@ -14,6 +14,9 @@ const {
 } = require("../utils/readNotificationHelper");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 const { sendNotification } = require("../utils/advanceNotifier");
+const { getPagination, getPagingData } = require("../utils/pagination");
+const { Op, QueryTypes } = require("sequelize");
+const Sequelize = require("sequelize");
 
 const helper = new Helper();
 
@@ -80,6 +83,72 @@ router.post(
         return handleResponse(res, "Resources Created Successfully", 201);
       });
     } catch (error) {
+      return handleForbidden(res, error);
+    }
+  }
+);
+
+// Get All Notifications
+router.get(
+  "/",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "notification_get_all");
+
+      const { page, size } = req.query;
+      const { limit, offset } = getPagination(page, size);
+
+      // const notifications = await Notification.findAndCountAll({
+      //   limit,
+      //   offset,
+      //   include: [
+      //     {
+      //       model: ReadNotification, // will create a left join
+      //       as: "AllReadNotification",
+      //       required: false,
+      //       where: {
+      //         [Op.or]: {
+      //           "$Notification.sender_id$": req.user.id,
+      //           "$AllReadNotification.receiver_id$": req.user.id,
+      //         },
+      //       },
+      //     },
+      //   ],
+      //   distinct: true,
+      //   order: [["createdAt", "desc"]],
+      // });
+
+      // console.log(test);
+
+      const query =
+        "select a.*, u.email, u.fullname, u.imgPath, r.role_name from Notifications as a " +
+        "inner join users as u on a.sender_id = u.id " +
+        "inner join roles as r on u.role_id = r.id " +
+        "left join ReadNotifications as ro on a.id = ro.notification_id " +
+        `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc limit ${offset},${limit};`;
+
+      const notifications = await sequelize.query(query, {
+        type: QueryTypes.SELECT,
+        model: Notification,
+        mapToModel: true, // pass true here if you have any mapped fields
+        nest: true,
+        raw: true,
+      });
+
+      const queryCount =
+        "select count(a.id) as count from Notifications as a " +
+        "left join ReadNotifications as ro on a.id = ro.notification_id " +
+        `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc;`;
+      const notificationsCount = await sequelize.query(queryCount, {
+        type: QueryTypes.SELECT,
+      });
+      const pg = { count: notificationsCount[0].count, rows: notifications };
+      return res.status(200).send(getPagingData(pg, page, limit));
+    } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
