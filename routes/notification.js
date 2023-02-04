@@ -15,8 +15,7 @@ const {
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { getPagination, getPagingData } = require("../utils/pagination");
-const { Op, QueryTypes } = require("sequelize");
-const Sequelize = require("sequelize");
+const { QueryTypes } = require("sequelize");
 
 const helper = new Helper();
 
@@ -121,14 +120,19 @@ router.get(
       //   order: [["createdAt", "desc"]],
       // });
 
-      // console.log(test);
+      // const query =
+      //   "select distinct a.*, u.email, u.fullname, u.imgPath, r.role_name, IFNULL(ro.read, true) as 'read', ro.receiver_id from Notifications as a " +
+      //   "inner join users as u on a.sender_id = u.id " +
+      //   "inner join roles as r on u.role_id = r.id " +
+      //   "left join ReadNotifications as ro on a.id = ro.notification_id " +
+      //   `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc limit ${offset},${limit};`;
 
       const query =
-        "select a.*, u.email, u.fullname, u.imgPath, r.role_name from Notifications as a " +
-        "inner join users as u on a.sender_id = u.id " +
+        "select distinct a.*, u.email, u.fullname, u.imgPath, r.role_name, IFNULL(ro.read, true) as 'read', ro.receiver_id from Notifications as a " +
+        "inner join users as u on u.id = a.sender_id " +
         "inner join roles as r on u.role_id = r.id " +
         "left join ReadNotifications as ro on a.id = ro.notification_id " +
-        `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc limit ${offset},${limit};`;
+        `where ro.receiver_id = '${req.user.id}' order by a.createdAt desc limit ${offset},${limit};`;
 
       const notifications = await sequelize.query(query, {
         type: QueryTypes.SELECT,
@@ -139,14 +143,48 @@ router.get(
       });
 
       const queryCount =
-        "select count(a.id) as count from Notifications as a " +
+        "select distinct count(a.id) as count from Notifications as a " +
         "left join ReadNotifications as ro on a.id = ro.notification_id " +
-        `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc;`;
+        `where ro.receiver_id = '${req.user.id}' order by a.createdAt desc;`;
       const notificationsCount = await sequelize.query(queryCount, {
         type: QueryTypes.SELECT,
       });
       const pg = { count: notificationsCount[0].count, rows: notifications };
       return res.status(200).send(getPagingData(pg, page, limit));
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
+  }
+);
+
+// Update unread Notifications
+router.put(
+  "/unread/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      if (!req.params.id) {
+        return handleResponse(res, "Please Add Required Field.");
+      }
+      await helper.checkPermission(
+        req.user.role_id,
+        "update_unread_notification"
+      );
+
+      await ReadNotification.update(
+        {
+          read: true,
+        },
+        {
+          where: {
+            notification_id: req.params.id,
+            receiver_id: req.user.id,
+          },
+        }
+      );
+      return res.status(200).send({ msg: "Update Successfully" });
     } catch (error) {
       console.log(error);
       return handleForbidden(res, error);

@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const Conversation = require("../models").Conversation;
+const { Conversation, sequelize } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
 const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
+const { handleForbidden, handleResponse } = require("../utils/handleError");
+const { QueryTypes } = require("sequelize");
 // Create a new Conversation
 router.post(
   "/",
@@ -95,6 +97,45 @@ router.post(
       .catch((error) => {
         res.status(403).send({ msg: error });
       });
+  }
+);
+
+// get Last Conversations
+router.post(
+  "/lastchats",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      const { page, size, search } = req.query;
+      const { limit, offset } = getPagination(page, size);
+      await helper.checkPermission(
+        req.user.role_id,
+        "user_conversation_get_all"
+      );
+      const query = `select um.*, sender_name,sender_email, sender_img, reciever_name,reciever_email, reciever_img from (select um.*,su.email as sender_email, su.fullname as sender_name, su.imgPath as sender_img ,ru.email as reciever_email, ru.fullname as reciever_name, ru.imgPath as reciever_img, row_number() over (partition by least(um.sender_id, um.receiver_id), greatest(um.sender_id, um.receiver_id) order by um.createdAt desc) as seqnum from conversations um inner join users su on su.id = um.sender_id inner join users ru on ru.id = um.receiver_id) um where seqnum = 1 and (um.sender_id = "${req.user.id}" or um.receiver_id = "${req.user.id}") and (sender_name like '%${search}%' or reciever_name like '%${search}%') order by um.createdAt desc limit ${offset},${limit};`;
+
+      const lastChats = await sequelize.query(query, {
+        type: QueryTypes.SELECT,
+        model: Conversation,
+        mapToModel: true, // pass true here if you have any mapped fields
+        nest: true,
+        raw: true,
+      });
+
+      const queryCount =
+        "select distinct count(a.id) as count from conversations as a " +
+        `where (a.sender_id = '${req.user.id}' or a.receiver_id = '${req.user.id}') order by a.createdAt desc;`;
+      const lastchatsCount = await sequelize.query(queryCount, {
+        type: QueryTypes.SELECT,
+      });
+      const pg = { count: lastchatsCount[0].count, rows: lastChats };
+      return res.status(200).send(getPagingData(pg, page, limit));
+    } catch (error) {
+      console.log(error);
+      return handleForbidden(res, error);
+    }
   }
 );
 

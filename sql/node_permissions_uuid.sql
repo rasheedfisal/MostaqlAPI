@@ -90,6 +90,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 ------------------- Notifications-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'notification_add', 'Add Notification', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'notification_get_all', 'Get All Notification Between Admin and Users', now(), now());
+INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'update_unread_notification', 'Allow User to Update Notification Status Read', now(), now());
 
 
 ------------------- Support Box-------------------

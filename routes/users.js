@@ -11,6 +11,7 @@ const {
   UserReviews,
   Project,
   UserWallet,
+  ReadNotifications,
 } = require("../models");
 const multer = require("multer");
 const passport = require("passport");
@@ -33,12 +34,15 @@ const mergeUserPermissions = (permissions) => {
   return mergedPermission;
 };
 const convertToUserInfoDto = (user) => {
+  const stringfy = JSON.stringify(user);
+  const authUser = JSON.parse(stringfy);
   const userInfoDto = {
-    // id: user.id,
-    email: user.email,
-    fullname: user.fullname,
-    imgPath: user.imgPath, //base64_encode(user.imgPath),
-    permissions: mergeUserPermissions(user.Role.permissions),
+    id: user.id,
+    email: authUser.email,
+    fullname: authUser.fullname,
+    imgPath: authUser.imgPath, //base64_encode(user.imgPath),
+    unreadCount: authUser.unread_count,
+    permissions: mergeUserPermissions(authUser.Role.permissions),
   };
   return userInfoDto;
 };
@@ -268,13 +272,19 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "user_get")
       .then((rolePerm) => {
-        User.findByPk(req.user?.id, {
+        User.findByPk(req.user.id, {
           attributes: [
             "id",
             "email",
             "fullname",
             getPath(req, "imgPath"),
             "is_active",
+            [
+              Sequelize.literal(
+                `(SELECT COUNT(*) FROM readnotifications AS unread WHERE unread.receiver_id = '${req.user.id}' and unread.read=0)`
+              ),
+              "unread_count",
+            ],
           ],
           include: [
             {
@@ -296,12 +306,15 @@ router.post(
             // },
           ],
         })
+          // .then((user) => res.status(200).send(user)) //
           .then((user) => res.status(200).send(convertToUserInfoDto(user))) //
           .catch((error) => {
+            console.log(error);
             res.status(400).send({ msg: error });
           });
       })
       .catch((error) => {
+        console.log(error);
         res.status(403).send({ msg: error });
       });
   }
