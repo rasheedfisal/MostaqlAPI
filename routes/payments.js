@@ -370,7 +370,7 @@ router.put(
           {
             beneficiary_id: user[0].id,
             type: "dr",
-            amount: request.amount,
+            amount: +request.amount,
             message: `${request.amount} have been added from your account`,
             user_id: req.user.id,
           },
@@ -411,7 +411,7 @@ router.put(
           await UserWallet.create(
             {
               user_id: user[0].id,
-              credit: request.amount,
+              credit: +request.amount,
             },
             { transaction: t }
           );
@@ -874,7 +874,7 @@ router.put(
           {
             beneficiary_id: user[0].id,
             type: "cr",
-            amount: request.amount,
+            amount: +request.amount,
             message: `${request.amount} have been withdrawn from your account`,
             user_id: req.user.id,
           },
@@ -902,7 +902,7 @@ router.put(
         if (wallet) {
           await UserWallet.update(
             {
-              credit: wallet.credit - request.amount,
+              credit: +wallet.credit - +request.amount,
             },
             {
               where: {
@@ -915,7 +915,7 @@ router.put(
           await UserWallet.create(
             {
               user_id: user[0].id,
-              credit: request.amount,
+              credit: +request.amount,
             },
             { transaction: t }
           );
