@@ -395,7 +395,8 @@ router.put(
       const ratePercent = offer.commissionRate.ratepercent;
       const discountAmount = (offer.price * ratePercent) / 100;
       const fullAmount = offer.price + discountAmount;
-      if (offer.Project.owner.wallet?.credit < fullAmount)
+
+      if (+offer.Project.owner.wallet?.credit < fullAmount)
         return handleResponse(res, "Credit is Insufficient.", 400);
       await sequelize.transaction(async (t) => {
         // chain all your queries here. make sure you return them.
@@ -440,7 +441,7 @@ router.put(
           },
           { transaction: t }
         );
-        const user = sequelize.query(
+        const user = await sequelize.query(
           "select * from users where id = (select user_offered_id from projectoffers where id= :reqId)",
           {
             replacements: { reqId: req.params.id },
@@ -475,6 +476,7 @@ router.put(
         return handleResponse(res, "Resource Updated Successfully.", 200);
       });
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
@@ -564,7 +566,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(notify.title, notify.description, user[0].email);
 
         return handleResponse(res, "Resource Updated Successfully.", 200);
       });
