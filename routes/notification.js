@@ -87,6 +87,38 @@ router.post(
   }
 );
 
+router.delete(
+  "/:id",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "notification_add");
+
+      if (!req.params.id)
+        return handleResponse(res, "Please pass Required Fields.", 400);
+
+      await sequelize.transaction(async (t) => {
+        // chain all your queries here. make sure you return them.
+
+        await Notification.destroy(
+          {
+            where: {
+              id: req.params.id,
+            },
+          },
+          { transaction: t }
+        );
+        return handleResponse(res, "Resources Deleted Successfully", 204);
+      });
+    } catch (error) {
+      console.log(error);
+      return handleForbidden(res, error);
+    }
+  }
+);
+
 // Get All Notifications
 router.get(
   "/",
@@ -99,33 +131,6 @@ router.get(
 
       const { page, size } = req.query;
       const { limit, offset } = getPagination(page, size);
-
-      // const notifications = await Notification.findAndCountAll({
-      //   limit,
-      //   offset,
-      //   include: [
-      //     {
-      //       model: ReadNotification, // will create a left join
-      //       as: "AllReadNotification",
-      //       required: false,
-      //       where: {
-      //         [Op.or]: {
-      //           "$Notification.sender_id$": req.user.id,
-      //           "$AllReadNotification.receiver_id$": req.user.id,
-      //         },
-      //       },
-      //     },
-      //   ],
-      //   distinct: true,
-      //   order: [["createdAt", "desc"]],
-      // });
-
-      // const query =
-      //   "select distinct a.*, u.email, u.fullname, u.imgPath, r.role_name, IFNULL(ro.read, true) as 'read', ro.receiver_id from Notifications as a " +
-      //   "inner join users as u on a.sender_id = u.id " +
-      //   "inner join roles as r on u.role_id = r.id " +
-      //   "left join ReadNotifications as ro on a.id = ro.notification_id " +
-      //   `where (a.sender_id = '${req.user.id}' or ro.receiver_id = '${req.user.id}') order by a.createdAt desc limit ${offset},${limit};`;
 
       const query =
         "select distinct a.*, u.email, u.fullname, u.imgPath, r.role_name, IFNULL(ro.read, true) as 'read', ro.receiver_id from Notifications as a " +
@@ -187,6 +192,34 @@ router.put(
       return res.status(200).send({ msg: "Update Successfully" });
     } catch (error) {
       console.log(error);
+      return handleForbidden(res, error);
+    }
+  }
+);
+
+// Get All Notifications by Sender
+router.get(
+  "/user",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "notification_get_all");
+
+      const { page, size } = req.query;
+      const { limit, offset } = getPagination(page, size);
+
+      const notifications = await Notification.findAndCountAll({
+        limit,
+        offset,
+        order: [["createdAt", "desc"]],
+        where: {
+          sender_id: req.user.id,
+        },
+      });
+      return res.status(200).send(getPagingData(notifications, page, limit));
+    } catch (error) {
       return handleForbidden(res, error);
     }
   }
