@@ -27,6 +27,7 @@
     "pug": "^3.0.2",
     "sequelize": "^6.6.5",
     "sequelize-auto": "^0.8.4",
+    "socket.io-client": "^4.5.4",
     "swig-email-templates": "^7.0.0",
     "transformers": "^1.8.3",
     "uuid": "^9.0.0"

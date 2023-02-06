@@ -909,6 +909,7 @@ router.post(
           });
         } else {
           let notify = {};
+          let reqUsers = [];
           sequelize
             .transaction((t) => {
               // chain all your queries here. make sure you return them.
@@ -943,7 +944,7 @@ router.post(
                 .then((notification) => {
                   notify = notification;
                   return sequelize.query(
-                    "select id from users where role_id in(select a.id from roles as a " +
+                    "select id,email from users where role_id in(select a.id from roles as a " +
                       "inner join rolepermissions as ro on a.id = ro.role_id " +
                       "inner join permissions as p on ro.perm_id = p.id " +
                       "where p.perm_name = 'can_access_dashboard')",
@@ -956,6 +957,7 @@ router.post(
                   );
                 })
                 .then((users) => {
+                  reqUsers = users;
                   var promises = [];
                   users.map((a) => {
                     var newPromise = ReadNotification.create(
@@ -972,6 +974,18 @@ router.post(
             })
 
             .then((_) => {
+              var notifyPromises = [];
+              reqUsers.map((a) => {
+                const notifyPromise = sendNotification(
+                  notify.title,
+                  notify.description,
+                  a.email
+                );
+                notifyPromises.push(notifyPromise);
+              });
+              Promise.all(notifyPromises).then((_) => {
+                console.log("success");
+              });
               // Transaction has been committed
               // result is whatever the result of the promise chain returned to the transaction callback
               res.status(201).send({
@@ -1119,7 +1133,7 @@ router.put(
                 sendNotification(
                   notifiyUser.title,
                   notifiyUser.description,
-                  "test"
+                  a.client.email
                 ).then((_) => {
                   console.log(`message sent ${a.user_offered_id}`);
                 });
@@ -1127,7 +1141,7 @@ router.put(
               sendNotification(
                 notifiyUser.title,
                 notifiyUser.description,
-                "test"
+                proj_details.owner.email
               ).then((_) => {
                 console.log(`message sent ${proj_details.user_added_id}`);
               });
@@ -1470,9 +1484,17 @@ router.put(
         await Promise.all(promises);
 
         projectDetails.projectoffers.map(async (a) => {
-          await sendNotification(notify.title, notify.description, "test");
+          await sendNotification(
+            notify.title,
+            notify.description,
+            a.client.email
+          );
         });
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(
+          notify.title,
+          notify.description,
+          projectDetails.owner.email
+        );
 
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
@@ -1566,13 +1588,17 @@ router.put(
             where: {
               id: request.id,
             },
-          }
-        );
-        const wallet = UserWallet.findOne({
-          where: {
-            user_id: projectDetails.projectoffers[0].client.id,
           },
-        });
+          { transaction: t }
+        );
+        const wallet = UserWallet.findOne(
+          {
+            where: {
+              user_id: projectDetails.projectoffers[0].client.id,
+            },
+          },
+          { transaction: t }
+        );
         const ratePercent =
           projectDetails.projectoffers[0].commissionRate.ratepercent;
         const discountAmount =
@@ -1661,9 +1687,17 @@ router.put(
         await Promise.all(promises);
 
         projectDetails.projectoffers.map(async (a) => {
-          await sendNotification(notify.title, notify.description, "test");
+          await sendNotification(
+            notify.title,
+            notify.description,
+            a.client.email
+          );
         });
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(
+          notify.title,
+          notify.description,
+          projectDetails.owner.email
+        );
 
         return handleResponse(res, "Resources Updated Successfully.");
       });

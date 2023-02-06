@@ -132,6 +132,17 @@ router.post(
         });
         await Promise.all(promises);
 
+        var notifyPromises = [];
+        users.map((a) => {
+          const notifyPromise = sendNotification(
+            notification.title,
+            notification.description,
+            a.email
+          );
+          notifyPromises.push(notifyPromise);
+        });
+        await Promise.all(notifyPromises);
+
         await sendEmailRequest({
           req,
           path: req.file?.path,
@@ -324,7 +335,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(notify.title, notify.description, user[0].email);
 
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
@@ -432,7 +443,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(notify.title, notify.description, user[0].email);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
@@ -518,6 +529,17 @@ router.post(
           promises.push(newPromise);
         });
         await Promise.all(promises);
+
+        var notifyPromises = [];
+        users.map((a) => {
+          const notifyPromise = sendNotification(
+            notify.title,
+            notify.description,
+            a.email
+          );
+          notifyPromises.push(notifyPromise);
+        });
+        await Promise.all(notifyPromises);
 
         await sendEmailRequest({
           req,
@@ -618,6 +640,17 @@ router.post(
           promises.push(newPromise);
         });
         await Promise.all(promises);
+
+        var notifyPromises = [];
+        users.map((a) => {
+          const notifyPromise = sendNotification(
+            notify.title,
+            notify.description,
+            a.email
+          );
+          notifyPromises.push(notifyPromise);
+        });
+        await Promise.all(notifyPromises);
 
         await sendEmailRequest({
           req,
@@ -828,7 +861,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(notify.title, notify.description, user[0].email);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
@@ -936,7 +969,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, "test");
+        await sendNotification(notify.title, notify.description, user[0].email);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {

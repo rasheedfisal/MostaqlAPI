@@ -114,10 +114,10 @@ module.exports = {
     description,
     amount,
     email,
-    attachment,
+    // attachment,
   }) => {
     try {
-      const fullPath = req.protocol + "://" + req.get("host") + "/" + path;
+      const attachment = req.protocol + "://" + req.get("host") + "/" + path;
       var today = new Date();
       var date =
         today.getFullYear() +
