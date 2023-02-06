@@ -1,8 +1,8 @@
 var io = require("socket.io-client");
 
-// const skt = io("http://194.195.87.30:89");
+const skt = io("http://194.195.87.30:89");
 
-const skt = io("http://localhost:3002");
+// const skt = io("http://localhost:3002");
 
 module.exports = {
   sendNotification: async (title, description, topic) => {

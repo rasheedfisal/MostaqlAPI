@@ -6,11 +6,13 @@ const {
   PrivacyPolicy,
   WithdrawableAmountSetting,
   AdminCardInfo,
+  sequelize,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
+const { QueryTypes } = require("sequelize");
 
 /////// paypal /////////
 router.post(
@@ -266,6 +268,31 @@ router.get(
           msg: error,
         });
       });
+  }
+);
+
+// get admin statistics
+router.get(
+  "/statistics",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  async function (req, res) {
+    try {
+      await helper.checkPermission(req.user.role_id, "can_access_dashboard");
+
+      const query = `
+      select (select count(*) from commissionrates where iscurrent=1) as 'currentCommision', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='In-Progress' limit 1)) as 'ongoingProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Open' limit 1)) as 'openProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Completed' limit 1)) as 'completedProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Closed' limit 1)) as 'closedProjects', (select count(*) from projectcloserequests) as 'closedProjectRequests', (select count(*) from projectcompletedrequests) as 'completedProjectRequests', (select count(*) from useraccountfeedrequest) as 'accountFeedRequests', (select count(*) from userwithdrawalrequest) as 'moneyWithdrawalRequests'
+      `;
+
+      const statistics = await sequelize.query(query, {
+        type: QueryTypes.SELECT,
+      });
+
+      return res.status(200).send(statistics);
+    } catch (error) {
+      return handleForbidden(res, error);
+    }
   }
 );
 
