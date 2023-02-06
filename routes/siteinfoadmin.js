@@ -13,6 +13,7 @@ require("../config/passport")(passport);
 const Helper = require("../utils/helper");
 const helper = new Helper();
 const { QueryTypes } = require("sequelize");
+const { handleForbidden, handleResponse } = require("../utils/handleError");
 
 /////// paypal /////////
 router.post(
@@ -271,6 +272,7 @@ router.get(
   }
 );
 
+////// statistics ////////
 // get admin statistics
 router.get(
   "/statistics",
@@ -282,7 +284,7 @@ router.get(
       await helper.checkPermission(req.user.role_id, "can_access_dashboard");
 
       const query = `
-      select (select count(*) from commissionrates where iscurrent=1) as 'currentCommision', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='In-Progress' limit 1)) as 'ongoingProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Open' limit 1)) as 'openProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Completed' limit 1)) as 'completedProjects', (select count(*) from projects where proj_status_id=(select projstatuses where stat_name='Closed' limit 1)) as 'closedProjects', (select count(*) from projectcloserequests) as 'closedProjectRequests', (select count(*) from projectcompletedrequests) as 'completedProjectRequests', (select count(*) from useraccountfeedrequest) as 'accountFeedRequests', (select count(*) from userwithdrawalrequest) as 'moneyWithdrawalRequests'
+      select (select count(*) from commissionrates where iscurrent=1) as 'currentCommision', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='In-Progress' limit 1)) as 'ongoingProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Open' limit 1)) as 'openProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Completed' limit 1)) as 'completedProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Closed' limit 1)) as 'closedProjects', (select count(*) from projectcloserequests) as 'closedProjectRequests', (select count(*) from projectcompletedrequests) as 'completedProjectRequests', (select count(*) from useraccountfeedrequests) as 'accountFeedRequests', (select count(*) from userwithdrawalrequests) as 'moneyWithdrawalRequests'
       `;
 
       const statistics = await sequelize.query(query, {
@@ -291,6 +293,7 @@ router.get(
 
       return res.status(200).send(statistics);
     } catch (error) {
+      console.log(error);
       return handleForbidden(res, error);
     }
   }
