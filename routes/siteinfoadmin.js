@@ -284,7 +284,7 @@ router.get(
       await helper.checkPermission(req.user.role_id, "can_access_dashboard");
 
       const query = `
-      select (select ratepercent from commissionrates where iscurrent=1 limit 1) as currentCommision, (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='In-Progress' limit 1)) as 'ongoingProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Open' limit 1)) as 'openProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Completed' limit 1)) as 'completedProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Closed' limit 1)) as 'closedProjects', (select count(*) from projectcloserequests) as 'closedProjectRequests', (select count(*) from projectcompletedrequests) as 'completedProjectRequests', (select count(*) from useraccountfeedrequests) as 'accountFeedRequests', (select count(*) from userwithdrawalrequests) as 'moneyWithdrawalRequests', (select ROUND(sum(((setup.price * setup.ratepercent) / 100) * 2), 2) from (select po.price, cr.ratepercent from projectoffers as po inner join projectcompletedrequests as pcr on po.id = pcr.offer_id inner join commissionrates as cr on po.rate_id = cr.id where pcr.approved = 1) as setup limit 1) as 'earnings';
+      select (select count(*) from users where is_active=1 limit 1) as usersCount, (select ratepercent from commissionrates where iscurrent=1 limit 1) as currentCommision, (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='In-Progress' limit 1)) as 'ongoingProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Open' limit 1)) as 'openProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Completed' limit 1)) as 'completedProjects', (select count(*) from projects where proj_status_id=(select id from projstatuses where stat_name='Closed' limit 1)) as 'closedProjects', (select count(*) from projectcloserequests) as 'closedProjectRequests', (select count(*) from projectcompletedrequests) as 'completedProjectRequests', (select count(*) from useraccountfeedrequests) as 'accountFeedRequests', (select count(*) from userwithdrawalrequests) as 'moneyWithdrawalRequests', (select ROUND(sum(((setup.price * setup.ratepercent) / 100) * 2), 2) from (select po.price, cr.ratepercent from projectoffers as po inner join projectcompletedrequests as pcr on po.id = pcr.offer_id inner join commissionrates as cr on po.rate_id = cr.id where pcr.approved = 1) as setup limit 1) as 'earnings';
       `;
 
       const statistics = await sequelize.query(query, {
@@ -295,6 +295,13 @@ router.get(
       select count(u.id) as count, r.role_name from users as u inner join roles as r on u.role_id=r.id group by u.role_id;
       `;
       const userRole = await sequelize.query(userRolesQuery, {
+        type: QueryTypes.SELECT,
+      });
+
+      const userAuthenticatedQuery = `
+      select count(u.id) as count, r.is_authorized from users as u inner join UserCredentials as r on u.id=r.user_id group by r.is_authorized;
+      `;
+      const userAuthenticated = await sequelize.query(userAuthenticatedQuery, {
         type: QueryTypes.SELECT,
       });
       const projectCategoryQuery = `
@@ -312,9 +319,10 @@ router.get(
 
       const mergedInfo = {
         statistics: statistics[0],
-        userRoles: userRole[0],
-        projectCategory: projectCategory[0],
-        earningPerMonth: earningPerMonth[0],
+        userRoles: userRole,
+        projectCategory: projectCategory,
+        earningPerMonth: earningPerMonth,
+        authorizedUsers: userAuthenticated,
       };
 
       return res.status(200).send(mergedInfo);
