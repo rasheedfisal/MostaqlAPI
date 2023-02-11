@@ -28,7 +28,7 @@ const Sequelize = require("sequelize");
 const { QueryTypes } = require("sequelize");
 const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
-const { getPath } = require("../utils/fileUrl");
+const { getPath, getNestedPath } = require("../utils/fileUrl");
 // const { getAllEnginnerEmailList } = require("../utils/findUsers");
 // const { sendToAllEnginners } = require("../utils/advanceMailer");
 const { sendNotification } = require("../utils/advanceNotifier");
@@ -228,15 +228,16 @@ router.get(
                   as: "owner",
                   attributes: [
                     "fullname",
-                    [
-                      Sequelize.fn(
-                        "concat",
-                        req.headers.host,
-                        "/",
-                        Sequelize.col("owner.imgPath")
-                      ),
-                      "avatar",
-                    ],
+                    getNestedPath(req, "owner.imgPath", "avatar"),
+                    // [
+                    //   Sequelize.fn(
+                    //     "concat",
+                    //     req.headers.host,
+                    //     "/",
+                    //     Sequelize.col("owner.imgPath")
+                    //   ),
+                    //   "avatar",
+                    // ],
                   ],
                 },
                 {
@@ -339,15 +340,16 @@ router.get(
               as: "owner",
               attributes: [
                 "fullname",
-                [
-                  Sequelize.fn(
-                    "concat",
-                    req.headers.host,
-                    "/",
-                    Sequelize.col("owner.imgPath")
-                  ),
-                  "avatar",
-                ],
+                getNestedPath(req, "owner.imgPath", "avatar"),
+                // [
+                //   Sequelize.fn(
+                //     "concat",
+                //     req.headers.host,
+                //     "/",
+                //     Sequelize.col("owner.imgPath")
+                //   ),
+                //   "avatar",
+                // ],
               ],
             },
             {
@@ -431,15 +433,16 @@ router.get(
               as: "owner",
               attributes: [
                 "fullname",
-                [
-                  Sequelize.fn(
-                    "concat",
-                    req.headers.host,
-                    "/",
-                    Sequelize.col("owner.imgPath")
-                  ),
-                  "avatar",
-                ],
+                getNestedPath(req, "owner.imgPath", "avatar"),
+                // [
+                //   Sequelize.fn(
+                //     "concat",
+                //     req.headers.host,
+                //     "/",
+                //     Sequelize.col("owner.imgPath")
+                //   ),
+                //   "avatar",
+                // ],
               ],
             },
             {
@@ -803,15 +806,16 @@ router.get(
               as: "owner",
               attributes: [
                 "fullname",
-                [
-                  Sequelize.fn(
-                    "concat",
-                    req.headers.host,
-                    "/",
-                    Sequelize.col("owner.imgPath")
-                  ),
-                  "avatar",
-                ],
+                getNestedPath(req, "owner.imgPath", "avatar"),
+                // [
+                //   Sequelize.fn(
+                //     "concat",
+                //     req.headers.host,
+                //     "/",
+                //     Sequelize.col("owner.imgPath")
+                //   ),
+                //   "avatar",
+                // ],
               ],
               //attributes: ["fullname"],
             },
@@ -850,15 +854,20 @@ router.get(
                   as: "client",
                   attributes: [
                     "fullname",
-                    [
-                      Sequelize.fn(
-                        "concat",
-                        req.headers.host,
-                        "/",
-                        Sequelize.col("projectoffers.client.imgPath")
-                      ),
-                      "avatar",
-                    ],
+                    getNestedPath(
+                      req,
+                      "projectoffers.client.imgPath",
+                      "avatar"
+                    ),
+                    // [
+                    //   Sequelize.fn(
+                    //     "concat",
+                    //     req.headers.host,
+                    //     "/",
+                    //     Sequelize.col("projectoffers.client.imgPath")
+                    //   ),
+                    //   "avatar",
+                    // ],
                   ],
                   include: {
                     model: UserProfile,
@@ -1206,15 +1215,16 @@ router.get(
                   "email",
                   "fullname",
                   "phone",
-                  [
-                    Sequelize.fn(
-                      "concat",
-                      req.headers.host,
-                      "/",
-                      Sequelize.col("ownerProject.owner.imgPath")
-                    ),
-                    "avatar",
-                  ],
+                  getNestedPath(req, "ownerProject.owner.imgPath", "avatar"),
+                  // [
+                  //   Sequelize.fn(
+                  //     "concat",
+                  //     req.headers.host,
+                  //     "/",
+                  //     Sequelize.col("ownerProject.owner.imgPath")
+                  //   ),
+                  //   "avatar",
+                  // ],
                   "is_active",
                 ],
               },
@@ -1287,15 +1297,16 @@ router.get(
                     "email",
                     "fullname",
                     "phone",
-                    [
-                      Sequelize.fn(
-                        "concat",
-                        req.headers.host,
-                        "/",
-                        Sequelize.col("ownerProject.owner.imgPath")
-                      ),
-                      "avatar",
-                    ],
+                    getNestedPath(req, "ownerProject.owner.imgPath", "avatar"),
+                    // [
+                    //   Sequelize.fn(
+                    //     "concat",
+                    //     req.headers.host,
+                    //     "/",
+                    //     Sequelize.col("ownerProject.owner.imgPath")
+                    //   ),
+                    //   "avatar",
+                    // ],
                     "is_active",
                   ],
                   include: {
@@ -1325,15 +1336,20 @@ router.get(
                     "email",
                     "fullname",
                     "phone",
-                    [
-                      Sequelize.fn(
-                        "concat",
-                        req.headers.host,
-                        "/",
-                        Sequelize.col("winning_offer.client.imgPath")
-                      ),
-                      "avatar",
-                    ],
+                    getNestedPath(
+                      req,
+                      "winning_offer.client.imgPath",
+                      "avatar"
+                    ),
+                    // [
+                    //   Sequelize.fn(
+                    //     "concat",
+                    //     req.headers.host,
+                    //     "/",
+                    //     Sequelize.col("winning_offer.client.imgPath")
+                    //   ),
+                    //   "avatar",
+                    // ],
                     "is_active",
                   ],
                   include: {

@@ -131,20 +131,6 @@ router.post(
       } catch (error) {
         res.status(400).send({ msg: error });
       }
-
-      // User.create({
-      //   email: req.body.email,
-      //   password: req.body.password,
-      //   fullname: req.body.fullname,
-      //   phone: req.body.phone,
-      //   imgPath: req.files.path,
-      //   role_id: req.body.role_id,
-      // })
-      //   .then((user) => res.status(201).send(user))
-      //   .catch((error) => {
-      //     console.log(error);
-      //     res.status(400).send({ msg: error });
-      //   });
     }
   }
 );
