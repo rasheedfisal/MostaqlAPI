@@ -311,7 +311,7 @@ router.get(
         type: QueryTypes.SELECT,
       });
       const earningPerMonthQuery = `
-      select sum(po.price) as 'earning_per_month', month(pcr.updatedAt) as 'month', year(pcr.updatedAt) as 'year' from projectoffers as po inner join projectcompletedrequests as pcr on po.id = pcr.offer_id where year(pcr.updatedAt) = year(now()) and pcr.approved=1 group by YEAR(pcr.updatedAt), MONTH(pcr.updatedAt);
+      select ROUND(sum(((po.price * cr.ratepercent) / 100) * 2), 2) as 'earning_per_month', month(pcr.updatedAt) as 'month', year(pcr.updatedAt) as 'year' from projectoffers as po inner join commissionrates as cr on po.rate_id = cr.id inner join projectcompletedrequests as pcr on po.id = pcr.offer_id where year(pcr.updatedAt) = year(now()) and pcr.approved=1 group by YEAR(pcr.updatedAt), MONTH(pcr.updatedAt);
       `;
       const earningPerMonth = await sequelize.query(earningPerMonthQuery, {
         type: QueryTypes.SELECT,
