@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { Conversation, sequelize } = require("../models");
+const { Conversation, sequelize, User } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
 const Helper = require("../utils/helper");
@@ -11,6 +11,7 @@ const { handleForbidden, handleResponse } = require("../utils/handleError");
 const { QueryTypes } = require("sequelize");
 const multer = require("multer");
 const { getPath, getNestedPath } = require("../utils/fileUrl");
+const { sendNotification } = require("../utils/advanceNotifier");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -86,9 +87,31 @@ router.post(
                   getNestedPath(req, "message", "fileUrl"),
                   "createdAt",
                 ],
+                include: {
+                  model: User,
+                  as: "receiver",
+                },
               })
-                .then((c) => res.status(201).send(c))
-                .catch((err) => res.status(500).send({ msg: err }));
+                .then((c) => {
+                  sendNotification(
+                    "New Message",
+                    c.message_type === "text"
+                      ? c.message
+                      : c.message_type === "image"
+                      ? "view image"
+                      : c.message_type === "file"
+                      ? "view document"
+                      : "message undefined",
+                    c.receiver.email
+                  )
+                    .then((_) => console.log("sent notification"))
+                    .catch((_) => console.log("error not sent"));
+                  res.status(201).send(c);
+                })
+                .catch((err) => {
+                  console.log(err);
+                  res.status(500).send({ msg: err });
+                });
             })
             .catch((error) => {
               console.log(error);

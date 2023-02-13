@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       Conversation.belongsTo(models.User, {
         foreignKey: "receiver_id",
+        as: "receiver",
       });
     }
   }
