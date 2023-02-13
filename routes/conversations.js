@@ -9,9 +9,51 @@ const { Op } = require("sequelize");
 const { getPagination, getPagingData } = require("../utils/pagination");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 const { QueryTypes } = require("sequelize");
+const multer = require("multer");
+const { getPath, getNestedPath } = require("../utils/fileUrl");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      new Date().toISOString().replace(/:/g, "_") + "use_" + file.originalname
+    );
+  },
+});
+const imageFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/jpeg" ||
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "application/msword" ||
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    file.mimetype === "text/plain" ||
+    file.mimetype === "application/vnd.ms-excel" ||
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.mimetype === "application/pdf"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 1024 * 1024 * 5,
+  },
+});
 // Create a new Conversation
 router.post(
   "/",
+  upload.single("attachment"),
   passport.authenticate("jwt", {
     session: false,
   }),
@@ -19,7 +61,11 @@ router.post(
     helper
       .checkPermission(req.user.role_id, "conversation_add")
       .then((rolePerm) => {
-        if (!req.body.receiver_id || !req.body.message) {
+        if (
+          !req.body.receiver_id ||
+          !req.body.message ||
+          !req.body.message_type
+        ) {
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
@@ -27,9 +73,23 @@ router.post(
           Conversation.create({
             sender_id: req.user?.id,
             receiver_id: req.body.receiver_id,
-            message: req.body.message,
+            message: req.file?.path ? req.file?.path : req.body.message,
+            message_type: req.body.message_type,
           })
-            .then((conversations) => res.status(201).send(conversations))
+            .then((conversations) => {
+              Conversation.findByPk(conversations.id, {
+                attributes: [
+                  "sender_id",
+                  "receiver_id",
+                  "message",
+                  "message_type",
+                  getNestedPath(req, "message", "fileUrl"),
+                  "createdAt",
+                ],
+              })
+                .then((c) => res.status(201).send(c))
+                .catch((err) => res.status(500).send({ msg: err }));
+            })
             .catch((error) => {
               console.log(error);
               res.status(400).send({ msg: error });
@@ -57,25 +117,15 @@ router.post(
         Conversation.findAndCountAll({
           limit,
           offset,
+          attributes: [
+            "sender_id",
+            "receiver_id",
+            "message",
+            "message_type",
+            getNestedPath(req, "message", "fileUrl"),
+            "createdAt",
+          ],
           where: {
-            // [Op.or]: [
-            //   { sender_id: req.user?.id },
-            //   { sender_id: req.body.receiver_id },
-            //   { receiver_id: req.user?.id },
-            //   { receiver_id: req.body.receiver_id },
-            // ],
-            // [Op.and]: {
-            //   [Op.or]: [
-            //     { sender_id: req.user?.id },
-            //     { sender_id: req.body.receiver_id },
-            //   ],
-            //   // { sender_id: req.user?.id },
-            //   // { sender_id: req.body.receiver_id },
-            //   [Op.or]: [
-            //     { receiver_id: req.user?.id },
-            //     { receiver_id: req.body.receiver_id },
-            //   ],
-            // },
             sender_id: {
               [Op.or]: [req.body.receiver_id, req.user?.id],
             },

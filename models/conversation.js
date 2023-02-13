@@ -28,23 +28,20 @@ module.exports = (sequelize, DataTypes) => {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
-        // references: {
-        //   model: "users",
-        //   key: "id",
-        // },
       },
       receiver_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         allowNull: false,
-        // references: {
-        //   model: "users",
-        //   key: "id",
-        // },
       },
       message: {
         type: DataTypes.TEXT("long"),
         allowNull: false,
+      },
+      message_type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "text",
       },
     },
     {
