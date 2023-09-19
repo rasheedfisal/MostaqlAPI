@@ -58,11 +58,7 @@ router.post(
             { transaction: t }
           );
           const user = await User.findByPk(req.body.target);
-          await sendNotification(
-            req.body.title,
-            req.body.description,
-            user.email
-          );
+          await sendNotification(req.body.title, req.body.description, user.id);
         } else {
           await bulkInsertReadNotifications(
             notification.id,

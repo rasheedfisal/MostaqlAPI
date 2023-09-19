@@ -60,7 +60,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'commission_rate_update', 'Update Commission Rate', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'commission_rate_delete', 'Delete Commission Rate', now(), now());
 
-------------------- Commission Rate -------------------
+------------------- Questions -------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_add', 'Add Common Question', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_get_all', 'Get All Common Question', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'common_questions_get', 'Get Common Question', now(), now());
@@ -81,6 +81,7 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'project_offer_update', 'Update Project Offer Price', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'project_offer_get_all', 'get Project Offers', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'update_offer_status', 'Update Offer Status', now(), now());
+
 -- INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'owner_project_offer_get_all', 'get owner Project Offers', now(), now());
 
 ------------------- Conversations-------------------
@@ -106,6 +107,8 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'withdraw_amount_setting', 'Add Minimum Withdrawable Amount', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'contactus_setting', 'Add Contact Us Information', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'creditcard_setting', 'Add Credit Card Information', now(), now());
+
+
 ------------------- Payments-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_add', 'Request Account Feed', now(), now());
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'feed_request_account_get_all', 'Get All Account Feed Requests', now(), now());
@@ -119,8 +122,10 @@ INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VA
 
 -------------------Can Access Dasboard-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'can_access_dashboard', 'allows the user to access the dashboard', now(), now());
+
 -------------------Is Enginner-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'is_enginner', 'is the user enginner', now(), now());
+
 -------------------Is Project Owner-------------------
 INSERT INTO permissions(id,perm_name, perm_description, createdAt, updatedAt) VALUES(uuid(),'is_project_owner', 'is the user project owner', now(), now());
 
@@ -138,9 +143,37 @@ insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(u
 insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee3f4d1-3b95-11ed-8686-ecf4bb83b19b', now(), now());
 insert into rolepermissions(id, role_id, perm_id, createdAt, updatedAt) values(uuid(), 'f1f4a509-3b95-11ed-8686-ecf4bb83b19b', 'bee6da5b-3b95-11ed-8686-ecf4bb83b19b', now(), now());
 
-                                                                                        "f1f4a509-3b95-11ed-8686-ecf4bb83b19b"
+--create stored procedure for add All permissions to role
 
+DELIMITER $$
+CREATE PROCEDURE givefullaccesstorole (IN role_id varchar(36))
+BEGIN
+DECLARE finished INTEGER DEFAULT 0;
+DECLARE perm_id varchar(36) DEFAULT "";
+DECLARE permCursor CURSOR FOR SELECT id FROM permissions;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+OPEN permCursor;
+addPermissionToRole: LOOP
+   FETCH permCursor INTO perm_id;
+   IF finished = 1 THEN 
+      LEAVE addPermissionToRole;
+   END IF;
+INSERT INTO `rolepermissions` (`id`, `role_id`, `perm_id`, `createdAt`, `updatedAt`) VALUES (uuid(), role_id, perm_id, now(), now());
+END LOOP addPermissionToRole;
+CLOSE permCursor;
+END$$
+DELIMITER ;
 
+------------------------
+CALL givefullaccesstorole("41762cd5-2428-11ee-be8c-0050564873b7");
+---------------------------
+DROP PROCEDURE givefullaccesstorole;
+
+----------------------------------------
+
+-- mysql backup using command line
+
+--mysqldump -u [username] –p[password] [database_name] > [dump_file.sql] --no-tablespaces -y
 
 
 

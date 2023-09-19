@@ -9,7 +9,8 @@ module.exports = {
         primaryKey: true,
       },
       role_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         allowNull: false,
         references: {
           model: "roles",
