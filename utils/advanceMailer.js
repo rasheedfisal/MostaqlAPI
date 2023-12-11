@@ -28,7 +28,7 @@ module.exports = {
         text: text,
         html: html,
       };
-      emailProcessor.sendMail(emailInfo);
+      await emailProcessor.sendMail(emailInfo);
     } catch (error) {
       console.error(error);
     }
@@ -62,7 +62,7 @@ module.exports = {
         text: text,
         html: html,
       };
-      emailProcessor.sendMail(emailInfo);
+      await emailProcessor.sendMail(emailInfo);
     } catch (error) {
       console.error(error);
     }
@@ -70,7 +70,7 @@ module.exports = {
 
   sendResetPassword: async (req, user, reset_key) => {
     try {
-      const fullPath = `${req.headers?.referer}reset/${user.id}/${reset_key}`;
+      const fullPath = `${process.env.FRONTEND_BASE_URL}/reset/${user.id}/${reset_key}`;
       var today = new Date();
       var date =
         today.getFullYear() +
@@ -98,7 +98,7 @@ module.exports = {
         text: text,
         html: html,
       };
-      emailProcessor.sendMail(emailInfo);
+      await emailProcessor.sendMail(emailInfo);
       console.log("message sent");
     } catch (error) {
       console.error(error);
@@ -149,7 +149,7 @@ module.exports = {
         text: text,
         html: html,
       };
-      emailProcessor.sendMail(emailInfo);
+      await emailProcessor.sendMail(emailInfo);
       console.log("message sent");
     } catch (error) {
       console.error(error);
