@@ -85,19 +85,6 @@ const upload = multer({
   },
 });
 
-// A function to generate OTP
-const generateOTP = (length) => {
-  const digits = "0123456789";
-  let otp = "";
-
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * digits.length);
-    otp += digits[randomIndex];
-  }
-
-  return otp;
-};
-
 router.post(
   "/signup",
   upload.fields([
@@ -463,33 +450,6 @@ router.get("/roles", async function (req, res) {
     res.status(200).send(roles);
   } catch (error) {
     res.status(400).send({ msg: error });
-  }
-});
-
-// forgot password
-router.post("/reset/forgot", async (req, res) => {
-  const { email } = req.body;
-
-  const userExist = await User.findOne({
-    where: {
-      email: email,
-    },
-  });
-
-  console.log(userExist);
-
-  if (userExist === null) {
-    return res.status(404).send({
-      msg: "User not found.",
-    });
-  }
-  try {
-    await sendResetPassword(req, userExist, generateOTP(6));
-    return res.status(200).send({
-      msg: "email sent successfully.",
-    });
-  } catch (error) {
-    console.log(error);
   }
 });
 
