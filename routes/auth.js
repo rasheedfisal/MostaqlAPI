@@ -270,7 +270,11 @@ router.post("/signin", loginLimiter, function (req, res) {
     })
     .catch((error) => res.status(400).send({ msg: error }));
 });
+
+router.get("test", (req, res) => res.send({message: "hello world"}));
 router.post("/dashboard_signin", loginLimiter, function (req, res) {
+  console.log("==> start signin");
+  
   User.findOne({
     attributes: [
       //[Sequelize.col("user.id"), "uid"],
@@ -315,6 +319,8 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
       const hasAccessToDashboard = user.Role.permissions.some(
         (el) => el.perm_name === "can_access_dashboard"
       );
+
+      
 
       if (!hasAccessToDashboard) {
         return res.status(401).send({

@@ -1,8 +1,8 @@
 const allowedOrigins = [
   "http://localhost:3001",
   "http://localhost:3002",
-  "https://mostaql.vercel.app",
-  "http://194.195.87.30:92",
+  "http://62.171.175.75:85",
+  "http://62.171.175.75:84"
 ];
 
 module.exports = allowedOrigins;
