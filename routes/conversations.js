@@ -187,7 +187,44 @@ router.post(
         req.user.role_id,
         "user_conversation_get_all"
       );
-      const query = `select um.*, sender_name,sender_email, sender_img, reciever_name,reciever_email, reciever_img from (select um.*,su.email as sender_email, su.fullname as sender_name, su.imgPath as sender_img ,ru.email as reciever_email, ru.fullname as reciever_name, ru.imgPath as reciever_img, row_number() over (partition by least(um.sender_id, um.receiver_id), greatest(um.sender_id, um.receiver_id) order by um.createdAt desc) as seqnum from conversations um inner join users su on su.id = um.sender_id inner join users ru on ru.id = um.receiver_id) um where seqnum = 1 and (um.sender_id = "${req.user.id}" or um.receiver_id = "${req.user.id}") and (sender_name like '%${search}%' or reciever_name like '%${search}%') order by um.createdAt desc limit ${offset},${limit};`;
+      // const query = `select um.*, sender_name,sender_email, sender_img, reciever_name,reciever_email, reciever_img from (select um.*,su.email as sender_email, su.fullname as sender_name, su.imgPath as sender_img ,ru.email as reciever_email, ru.fullname as reciever_name, ru.imgPath as reciever_img, row_number() over (partition by least(um.sender_id, um.receiver_id), greatest(um.sender_id, um.receiver_id) order by um.createdAt desc) as seqnum from conversations um inner join users su on su.id = um.sender_id inner join users ru on ru.id = um.receiver_id) um where seqnum = 1 and (um.sender_id = "${req.user.id}" or um.receiver_id = "${req.user.id}") and (sender_name like '%${search}%' or reciever_name like '%${search}%') order by um.createdAt desc limit ${offset},${limit};`;
+
+      const query = `
+          SELECT 
+            um.*, 
+            sender.email AS sender_email, 
+            sender.fullname AS sender_name, 
+            sender.imgPath AS sender_img,
+            receiver.email AS receiver_email,
+            receiver.fullname AS receiver_name,
+            receiver.imgPath AS receiver_img
+            FROM 
+                conversations um
+            INNER JOIN 
+                users sender ON sender.id = um.sender_id
+            INNER JOIN 
+                users receiver ON receiver.id = um.receiver_id
+            WHERE
+                (
+                    um.sender_id = "${req.user.id}" 
+                    OR um.receiver_id = "${req.user.id}"
+                )
+                AND (
+                    (sender.fullname LIKE '%${search}%' AND sender.id != "${req.user.id}")
+                    OR (receiver.fullname LIKE '%${search}%' AND receiver.id != "${req.user.id}")
+                )
+                AND um.createdAt = (
+                    SELECT MAX(createdAt)
+                    FROM conversations
+                    WHERE 
+                        (conversations.sender_id = um.sender_id AND conversations.receiver_id = um.receiver_id)
+                        OR (conversations.sender_id = um.receiver_id AND conversations.receiver_id = um.sender_id)
+                )
+            ORDER BY 
+                um.createdAt DESC
+            LIMIT ${offset},${limit};
+
+      `;
 
       const lastChats = await sequelize.query(query, {
         type: QueryTypes.SELECT,
