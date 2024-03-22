@@ -137,7 +137,7 @@ router.post(
           const notifyPromise = sendNotification(
             notification.title,
             notification.description,
-            a.email
+            a.id
           );
           notifyPromises.push(notifyPromise);
         });
@@ -335,7 +335,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
 
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
@@ -443,7 +443,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
@@ -535,7 +535,7 @@ router.post(
           const notifyPromise = sendNotification(
             notify.title,
             notify.description,
-            a.email
+            a.id
           );
           notifyPromises.push(notifyPromise);
         });
@@ -646,7 +646,7 @@ router.post(
           const notifyPromise = sendNotification(
             notify.title,
             notify.description,
-            a.email
+            a.id
           );
           notifyPromises.push(notifyPromise);
         });
@@ -861,7 +861,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {
@@ -969,7 +969,7 @@ router.put(
           },
           { transaction: t }
         );
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
         return handleResponse(res, "Resources Updated Successfully.", 200);
       });
     } catch (error) {

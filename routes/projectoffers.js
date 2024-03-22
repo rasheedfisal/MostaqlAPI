@@ -271,7 +271,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
 
         return handleResponse(res, "Resource Updated Successfully.", 200);
       });
@@ -470,7 +470,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
 
         return handleResponse(res, "Resource Updated Successfully.", 200);
       });
@@ -565,7 +565,7 @@ router.put(
           { transaction: t }
         );
 
-        await sendNotification(notify.title, notify.description, user[0].email);
+        await sendNotification(notify.title, notify.description, user[0].id);
 
         return handleResponse(res, "Resource Updated Successfully.", 200);
       });

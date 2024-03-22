@@ -19,6 +19,7 @@ const {
   sequelize,
 } = require("../models");
 const { sendResetPassword } = require("../utils/advanceMailer");
+const { sendNotification } = require("../utils/advanceNotifier");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -250,8 +251,8 @@ router.post("/signin", loginLimiter, function (req, res) {
 
           res.cookie("jwt", refreshToken, {
             httpOnly: true, //accessible only by web server
-            secure: true, //https
-            sameSite: "None", //cross-site cookie
+            //secure: true, //https
+            //sameSite: "None", //cross-site cookie
             maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
 
@@ -259,6 +260,7 @@ router.post("/signin", loginLimiter, function (req, res) {
             success: true,
             token,
             status,
+            id: userDto.uid,
           });
         } else {
           res.status(401).send({
@@ -271,10 +273,10 @@ router.post("/signin", loginLimiter, function (req, res) {
     .catch((error) => res.status(400).send({ msg: error }));
 });
 
-router.get("test", (req, res) => res.send({message: "hello world"}));
+router.get("test", (req, res) => res.send({ message: "hello world" }));
 router.post("/dashboard_signin", loginLimiter, function (req, res) {
   console.log("==> start signin");
-  
+
   User.findOne({
     attributes: [
       //[Sequelize.col("user.id"), "uid"],
@@ -320,8 +322,6 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
         (el) => el.perm_name === "can_access_dashboard"
       );
 
-      
-
       if (!hasAccessToDashboard) {
         return res.status(401).send({
           msg: "Unauthorized",
@@ -346,8 +346,8 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
 
           res.cookie("jwt", refreshToken, {
             httpOnly: true, //accessible only by web server
-            secure: true, //https
-            sameSite: "None", //cross-site cookie
+            //secure: true, //https
+            //sameSite: "None", //cross-site cookie
             maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
 
@@ -434,7 +434,11 @@ router.get("/refresh", function (req, res) {
 router.post("/signout", function (req, res) {
   const cookies = req.cookies;
   if (!cookies?.jwt) return res.sendStatus(204); //No content
-  res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: true });
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    //secure: true,
+    //sameSite: "None"
+  });
   res.json({ msg: "Cookie cleared" });
 });
 
@@ -454,6 +458,20 @@ router.get("/roles", async function (req, res) {
       }
     );
     res.status(200).send(roles);
+  } catch (error) {
+    res.status(400).send({ msg: error });
+  }
+});
+
+// Test Notification
+router.post("/test/notify", async function (req, res) {
+  try {
+    await sendNotification(
+      "test",
+      "test-des",
+      "affb7863-9757-4ef3-9fba-ec1e30550c1d"
+    );
+    res.status(200).send({ success: true });
   } catch (error) {
     res.status(400).send({ msg: error });
   }

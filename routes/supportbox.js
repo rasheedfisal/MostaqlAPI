@@ -86,7 +86,7 @@ router.post(
                 });
             })
             .then((_) => {
-              sendNotification(notify.title, notify.description, "test")
+              sendNotification(notify.title, notify.description, "ADMIN")
                 .then((_) => {
                   res.status(201).send({
                     msg: "Resourse updated Successfully",
@@ -271,7 +271,7 @@ router.put(
                     sendNotification(
                       notifiyUser.title,
                       notifiyUser.description,
-                      "test"
+                      reqUser.id
                     )
                       .then((_) => {
                         res.status(201).send({

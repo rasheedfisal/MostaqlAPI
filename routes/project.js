@@ -988,7 +988,7 @@ router.post(
                 const notifyPromise = sendNotification(
                   notify.title,
                   notify.description,
-                  a.email
+                  a.id
                 );
                 notifyPromises.push(notifyPromise);
               });
@@ -1142,7 +1142,7 @@ router.put(
                 sendNotification(
                   notifiyUser.title,
                   notifiyUser.description,
-                  a.client.email
+                  a.client.id
                 ).then((_) => {
                   console.log(`message sent ${a.user_offered_id}`);
                 });
@@ -1150,7 +1150,7 @@ router.put(
               sendNotification(
                 notifiyUser.title,
                 notifiyUser.description,
-                proj_details.owner.email
+                proj_details.owner.id
               ).then((_) => {
                 console.log(`message sent ${proj_details.user_added_id}`);
               });
@@ -1500,16 +1500,12 @@ router.put(
         await Promise.all(promises);
 
         projectDetails.projectoffers.map(async (a) => {
-          await sendNotification(
-            notify.title,
-            notify.description,
-            a.client.email
-          );
+          await sendNotification(notify.title, notify.description, a.client.id);
         });
         await sendNotification(
           notify.title,
           notify.description,
-          projectDetails.owner.email
+          projectDetails.owner.id
         );
 
         return handleResponse(res, "Resources Updated Successfully.", 200);
@@ -1703,16 +1699,12 @@ router.put(
         await Promise.all(promises);
 
         projectDetails.projectoffers.map(async (a) => {
-          await sendNotification(
-            notify.title,
-            notify.description,
-            a.client.email
-          );
+          await sendNotification(notify.title, notify.description, a.client.id);
         });
         await sendNotification(
           notify.title,
           notify.description,
-          projectDetails.owner.email
+          projectDetails.owner.id
         );
 
         return handleResponse(res, "Resources Updated Successfully.");

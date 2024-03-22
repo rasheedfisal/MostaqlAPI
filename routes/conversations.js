@@ -102,7 +102,7 @@ router.post(
                       : c.message_type === "file"
                       ? "view document"
                       : "message undefined",
-                    c.receiver.email
+                    c.receiver.id
                   )
                     .then((_) => console.log("sent notification"))
                     .catch((_) => console.log("error not sent"));
