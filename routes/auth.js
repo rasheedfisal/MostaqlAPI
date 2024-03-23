@@ -505,7 +505,7 @@ router.post("/forgot-password", async (req, res) => {
     await sendResetPassword(userExistsEmail, verificationCode);
 
     return res.status(200).send({
-      msg: "Verification code cannot be created due to internal error.",
+      msg: "Verification code was sent please check your email.",
     });
   } catch (error) {
     return res.status(500).send({
