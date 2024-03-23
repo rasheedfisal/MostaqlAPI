@@ -71,8 +71,6 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
-          console.log(req.files);
-
           Conversation.create({
             sender_id: req.user?.id,
             receiver_id: req.body.receiver_id,
