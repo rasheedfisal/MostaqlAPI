@@ -28,7 +28,6 @@ module.exports = {
           title: title,
           description: description,
         });
-        console.log(MessageResponse?.data);
       } else {
         console.error("error: message not send");
       }

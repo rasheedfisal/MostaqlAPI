@@ -71,6 +71,8 @@ router.post(
             msg: "missing fields please add required info.",
           });
         } else {
+          console.log(req.files);
+
           Conversation.create({
             sender_id: req.user?.id,
             receiver_id: req.body.receiver_id,
@@ -235,12 +237,38 @@ router.post(
       });
 
       const queryCount =
-        "select distinct count(a.id) as count from conversations as a " +
-        `where (a.sender_id = '${req.user.id}' or a.receiver_id = '${req.user.id}') order by a.createdAt desc;`;
+        // "select distinct count(a.id) as count from conversations as a " +
+        // `where (a.sender_id = '${req.user.id}' or a.receiver_id = '${req.user.id}') order by a.createdAt desc;`;
+        `
+      SELECT COUNT(*) AS total_record_count
+      FROM conversations um
+      INNER JOIN users sender ON sender.id = um.sender_id
+      INNER JOIN users receiver ON receiver.id = um.receiver_id
+      WHERE
+        (
+            um.sender_id = '${req.user.id}' 
+            OR um.receiver_id = '${req.user.id}'
+        )
+        AND (
+            (sender.fullname LIKE '%search_query%' AND sender.id != '${req.user.id}')
+            OR (receiver.fullname LIKE '%search_query%' AND receiver.id != '${req.user.id}')
+        )
+        AND um.createdAt = (
+            SELECT MAX(createdAt)
+            FROM conversations
+            WHERE 
+                (conversations.sender_id = um.sender_id AND conversations.receiver_id = um.receiver_id)
+                OR (conversations.sender_id = um.receiver_id AND conversations.receiver_id = um.sender_id)
+        );
+
+      `;
       const lastchatsCount = await sequelize.query(queryCount, {
         type: QueryTypes.SELECT,
       });
-      const pg = { count: lastchatsCount[0].count, rows: lastChats };
+      const pg = {
+        count: lastchatsCount[0].total_record_count,
+        rows: lastChats,
+      };
       return res.status(200).send(getPagingData(pg, page, limit));
     } catch (error) {
       console.log(error);

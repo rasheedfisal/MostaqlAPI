@@ -20,6 +20,7 @@ const {
 } = require("../models");
 const { sendResetPassword } = require("../utils/advanceMailer");
 const { sendNotification } = require("../utils/advanceNotifier");
+const { sendMail } = require("../utils/mailingProcessor");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -471,6 +472,19 @@ router.post("/test/notify", async function (req, res) {
       "test-des",
       "affb7863-9757-4ef3-9fba-ec1e30550c1d"
     );
+    res.status(200).send({ success: true });
+  } catch (error) {
+    res.status(400).send({ msg: error });
+  }
+});
+// Test Email
+router.post("/test/mail", async function (req, res) {
+  try {
+    await sendMail({
+      to: "rasheed.fisal2015@gmail.com",
+      subject: "test01",
+      html: "<p>test body <a href='https://www.google.com'>01</a> </p>",
+    });
     res.status(200).send({ success: true });
   } catch (error) {
     res.status(400).send({ msg: error });
