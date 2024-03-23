@@ -68,7 +68,7 @@ module.exports = {
     }
   },
 
-  sendResetPassword: async (req, user, reset_key) => {
+  sendResetPassword: async (user, reset_key) => {
     try {
       const fullPath = `${process.env.FRONTEND_BASE_URL}/reset/${user.id}/${reset_key}`;
       var today = new Date();

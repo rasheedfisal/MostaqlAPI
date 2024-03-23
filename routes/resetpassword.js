@@ -27,7 +27,7 @@ router.post("/", function (req, res) {
           user_id: user.id,
         })
           .then((reset) => {
-            sendResetPassword(req, user, reset.reset_key)
+            sendResetPassword(user, reset.reset_key)
               .then((_) => {
                 return res
                   .status(200)

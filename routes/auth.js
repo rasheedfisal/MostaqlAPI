@@ -21,6 +21,8 @@ const {
 const { sendResetPassword } = require("../utils/advanceMailer");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { sendMail } = require("../utils/mailingProcessor");
+const pubClient = require("../utils/redisClient");
+const bcrypt = require("bcryptjs");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -87,6 +89,27 @@ const upload = multer({
   },
 });
 
+// A regex pattern for validating email
+const regexemail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/;
+
+// A function to check if the string has a value or not
+function notContainsValue(str) {
+  return !(str && str.length > 0);
+}
+
+// A function to generate OTP
+function generateOTP(length) {
+  const digits = "0123456789";
+  let otp = "";
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * digits.length);
+    otp += digits[randomIndex];
+  }
+
+  return otp;
+}
+
 router.post(
   "/signup",
   upload.fields([
@@ -137,6 +160,7 @@ router.post(
     }
   }
 );
+
 router.post(
   "/dashboard_signup",
   upload.single("profileImage"),
@@ -275,6 +299,7 @@ router.post("/signin", loginLimiter, function (req, res) {
 });
 
 router.get("test", (req, res) => res.send({ message: "hello world" }));
+
 router.post("/dashboard_signin", loginLimiter, function (req, res) {
   console.log("==> start signin");
 
@@ -441,6 +466,112 @@ router.post("/signout", function (req, res) {
     //sameSite: "None"
   });
   res.json({ msg: "Cookie cleared" });
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  // Check if the variable is empty
+  if (notContainsValue(email)) {
+    return res.status(400).send({
+      msg: "Email is required.",
+    });
+  }
+
+  // Check if the email is valid
+  if (!regexemail.test(email)) {
+    return res.status(400).send({
+      msg: "Email is not valid.",
+    });
+  }
+
+  try {
+    // Check if the email is already exists
+    const userExistsEmail = await User.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!userExistsEmail) {
+      return res.status(404).send({
+        msg: "Email is not found.",
+      });
+    }
+
+    const verificationCode = generateOTP(6);
+    // Store otp at redis cache
+    await pubClient.set(userExistsEmail.id, verificationCode);
+
+    await sendResetPassword(userExistsEmail, verificationCode);
+
+    return res.status(200).send({
+      msg: "Verification code cannot be created due to internal error.",
+    });
+  } catch (error) {
+    return res.status(500).send({
+      msg: error,
+    });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  const { id, otp, newPassword, confirmNewPassword } = req.body;
+  // Check if the variables is empty
+  if (
+    notContainsValue(id) ||
+    notContainsValue(otp) ||
+    notContainsValue(newPassword) ||
+    notContainsValue(confirmNewPassword)
+  ) {
+    return res.status(400).json({
+      msg: "Email, New Password and Confirm password is required.",
+    });
+  }
+
+  // Check if the confirm password matches to password
+  if (confirmNewPassword !== newPassword) {
+    return res.status(400).json({
+      msg: "Confirm password does not match!",
+    });
+  }
+
+  try {
+    const verificationCode = await pubClient.get(id);
+
+    if (verificationCode === null || verificationCode !== otp) {
+      return res.status(400).json({
+        msg: "Reset link is not valid!",
+      });
+    }
+
+    // Check if the email is already exists
+    const userExists = await User.findByPk(id);
+
+    if (!userExists) {
+      return res.status(404).send({
+        msg: "User is not found.",
+      });
+    }
+    await User.update(
+      {
+        password: bcrypt.hashSync(newPassword, bcrypt.genSaltSync(10), null),
+      },
+      {
+        where: {
+          id: userExists.id,
+        },
+      }
+    );
+
+    await pubClient.del(userExists.id);
+    return res.status(200).json({
+      msg: "New password successfully applied. Login to continue.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      msg: error,
+    });
+  }
 });
 
 // Get Non Admin Roles

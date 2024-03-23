@@ -25,6 +25,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pug": "^3.0.2",
+    "redis": "^4.6.13",
     "sequelize": "^6.37.1",
     "sequelize-auto": "^0.8.8",
     "socket.io-client": "^4.7.5",

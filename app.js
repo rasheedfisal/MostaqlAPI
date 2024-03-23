@@ -28,17 +28,15 @@ var SiteInfoAdminRouter = require("./routes/siteinfoadmin");
 var PaymentsRouter = require("./routes/payments");
 var SupportBoxRouter = require("./routes/supportbox");
 var NotificationRouter = require("./routes/notification");
+const pubClient = require("./utils/redisClient");
 
 var app = express();
-
 
 app.use(cors(corsOptions));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
-
-
 
 app.use(logger("dev"));
 app.use(express.json());
@@ -73,8 +71,6 @@ app.use(`${apiV1}/payments`, PaymentsRouter);
 app.use(`${apiV1}/support`, SupportBoxRouter);
 app.use(`${apiV1}/notification`, NotificationRouter);
 
-
-
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
@@ -90,5 +86,8 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render("error");
 });
+(async () => {
+  await pubClient.connect();
+})();
 
 module.exports = app;
