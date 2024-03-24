@@ -70,6 +70,10 @@ router.post(
           res.status(400).send({
             msg: "missing fields please add required info.",
           });
+        } else if (req.body.receiver_id === req.user?.id) {
+          res.status(400).send({
+            msg: "cannot send message to your self.",
+          });
         } else {
           Conversation.create({
             sender_id: req.user?.id,
