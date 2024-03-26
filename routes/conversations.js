@@ -252,8 +252,8 @@ router.post(
             OR um.receiver_id = '${req.user.id}'
         )
         AND (
-            (sender.fullname LIKE '%search_query%' AND sender.id != '${req.user.id}')
-            OR (receiver.fullname LIKE '%search_query%' AND receiver.id != '${req.user.id}')
+            (sender.fullname LIKE '%${search}%' AND sender.id != '${req.user.id}')
+            OR (receiver.fullname LIKE '%${search}%' AND receiver.id != '${req.user.id}')
         )
         AND um.createdAt = (
             SELECT MAX(createdAt)
@@ -267,6 +267,7 @@ router.post(
       const lastchatsCount = await sequelize.query(queryCount, {
         type: QueryTypes.SELECT,
       });
+
       const pg = {
         count: lastchatsCount[0].total_record_count,
         rows: lastChats,
