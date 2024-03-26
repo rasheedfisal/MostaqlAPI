@@ -37,7 +37,7 @@ exports.sendMail = async function (emailInfo) {
     // });
     const msg = {
       to: emailInfo.to, // Change to your recipient
-      from: process.env.SENDGRID_USER, // Change to your verified sender
+      from: `${emailInfo.subject} <${process.env.SENDGRID_USER}>`, // Change to your verified sender
       subject: emailInfo.subject,
       //text: "and easy to do anywhere, even with Node.js",
       html: emailInfo.html,
