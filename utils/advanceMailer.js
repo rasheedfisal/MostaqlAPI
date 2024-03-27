@@ -92,7 +92,7 @@ module.exports = {
         variables
       );
       var emailInfo = {
-        from: process.env.MAILING_EMAIL,
+        from: `Architect <${process.env.SENDGRID_USER}>`,
         to: user.email,
         subject: "Reset Password",
         text: text,
