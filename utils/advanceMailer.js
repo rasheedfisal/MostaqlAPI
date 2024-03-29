@@ -22,7 +22,7 @@ module.exports = {
         variables
       );
       var emailInfo = {
-        from: process.env.MAILING_EMAIL,
+        from: `Architect <${process.env.SENDGRID_USER}>`,
         to: usersList,
         subject: "New Project",
         text: text,
@@ -56,7 +56,7 @@ module.exports = {
         variables
       );
       var emailInfo = {
-        from: process.env.MAILING_EMAIL,
+        from: `Architect <${process.env.SENDGRID_USER}>`,
         to: user.email,
         subject: "Authorization Request",
         text: text,
@@ -143,7 +143,7 @@ module.exports = {
         variables
       );
       var emailInfo = {
-        from: process.env.MAILING_EMAIL,
+        from: `Architect <${process.env.SENDGRID_USER}>`,
         to: email,
         subject: requestName,
         text: text,

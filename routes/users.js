@@ -11,7 +11,8 @@ const {
   UserReviews,
   Project,
   UserWallet,
-  ReadNotifications,
+  ReadNotification,
+  Notification,
 } = require("../models");
 const multer = require("multer");
 const passport = require("passport");
@@ -26,6 +27,7 @@ const db = require("../models");
 const { sendToUserAuthorize } = require("../utils/advanceMailer");
 const Sequelize = require("sequelize");
 const bcrypt = require("bcryptjs");
+const { sendNotification } = require("../utils/advanceNotifier");
 
 const mergeUserPermissions = (permissions) => {
   let mergedPermission = [];
@@ -864,7 +866,7 @@ router.put(
                       .then((user) => {
                         const status =
                           !credentials.is_authorized === true
-                            ? "Accepted"
+                            ? "Verified"
                             : "Rejected";
                         sendToUserAuthorize(user, status)
                           .then((_) => {
@@ -875,6 +877,36 @@ router.put(
                           .catch((err) => {
                             return res.status(500).send({ msg: err });
                           });
+
+                        Notification.create({
+                          title: "Credentials Update",
+                          description: `hello ${
+                            user.fullname
+                          }, your identity was ${
+                            !credentials.is_authorized === true
+                              ? "verified"
+                              : "rejected"
+                          }`,
+                          type: "admin-to-user",
+                          sender_id: req.user.id,
+                        })
+                          .then((notify) => {
+                            ReadNotification.create({
+                              notification_id: notify.id,
+                              receiver_id: user.id,
+                            })
+                              .then((_) => {
+                                sendNotification(
+                                  notify.title,
+                                  notify.description,
+                                  user.id
+                                )
+                                  .then((_) => console.log("notification sent"))
+                                  .catch((err) => console.log(err));
+                              })
+                              .catch((err) => console.log(err));
+                          })
+                          .catch((err) => console.error(err));
                       })
                       .catch((err) => console.error(err));
                   })
