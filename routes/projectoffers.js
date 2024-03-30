@@ -222,10 +222,10 @@ router.put(
       if (offer.Project.owner.wallet === null)
         return handleResponse(res, "Wallet is Empty.", 400);
 
-      const ratePercent = offer.commissionRate.ratepercent;
-      const discountAmount = (offer.price * ratePercent) / 100;
-      const fullAmount = req.body.price + discountAmount;
-      if (offer.Project.owner.wallet?.credit < fullAmount)
+      const ratePercent = +offer.commissionRate.ratepercent;
+      const discountAmount = (+offer.price * ratePercent) / 100;
+      const fullAmount = +req.body.price + discountAmount;
+      if (+offer.Project.owner.wallet?.credit < fullAmount)
         return handleResponse(res, "Credit is Insufficient.", 400);
       await sequelize.transaction(async (t) => {
         // chain all your queries here. make sure you return them.
@@ -391,9 +391,10 @@ router.put(
       if (offer.Project.owner.wallet === null)
         return handleResponse(res, "Wallet is Empty.", 400);
 
-      const ratePercent = offer.commissionRate.ratepercent;
-      const discountAmount = (offer.price * ratePercent) / 100;
-      const fullAmount = offer.price + discountAmount;
+      const ratePercent = +offer.commissionRate.ratepercent;
+
+      const discountAmount = (+offer.price * ratePercent) / 100;
+      const fullAmount = +offer.price + discountAmount;
 
       if (+offer.Project.owner.wallet?.credit < fullAmount)
         return handleResponse(res, "Credit is Insufficient.", 400);
