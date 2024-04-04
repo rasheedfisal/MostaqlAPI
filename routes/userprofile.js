@@ -6,6 +6,8 @@ const {
   UserSkills,
   Portfolio,
   UserCredentials,
+  UserReviews,
+  UserWallet,
 } = require("../models");
 const passport = require("passport");
 require("../config/passport")(passport);
@@ -247,6 +249,15 @@ router.get(
                   model: UserSkills,
                   as: "userskills",
                   attributes: ["skill_name"],
+                },
+                {
+                  model: UserWallet,
+                  as: "wallet",
+                },
+                {
+                  model: UserReviews,
+                  attributes: ["comment", "star_rate", "createdAt"],
+                  as: "talentreview",
                 },
                 {
                   model: Portfolio,

@@ -800,15 +800,15 @@ router.post(
       .then((rolePerm) => {
         db.sequelize
           .query(
-            "select * from users where role_id in(select a.id from roles as a " +
+            "select usr.*, (SELECT SUM(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = usr.id) / (SELECT count(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = usr.id) as review_avg from users as usr where role_id in(select a.id from roles as a " +
               "inner join rolepermissions as ro on a.id = ro.role_id " +
               "inner join permissions as p on ro.perm_id = p.id " +
               "where p.perm_name = 'is_enginner') LIMIT :offset,:limit",
             {
               replacements: { offset, limit },
               type: QueryTypes.SELECT,
-              model: User,
-              mapToModel: true, // pass true here if you have any mapped fields
+              //model: User,
+              //mapToModel: true, // pass true here if you have any mapped fields
             }
           )
           .then((users) => {

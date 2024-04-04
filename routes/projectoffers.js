@@ -24,6 +24,8 @@ const { getPath } = require("../utils/fileUrl");
 const { getCurrentRate } = require("../utils/commissions");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { QueryTypes } = require("sequelize");
+const { Op } = require("sequelize");
+const Sequelize = require("sequelize");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 
 const storage = multer.diskStorage({
@@ -289,6 +291,7 @@ router.get(
   function (req, res) {
     const { page, size } = req.query;
     const { limit, offset } = getPagination(page, size);
+
     helper
       .checkPermission(req.user.role_id, "project_offer_get_all")
       .then((rolePerm) => {
@@ -325,6 +328,240 @@ router.get(
           ],
           where: {
             proj_id: req.params.id,
+          },
+          distinct: true,
+        })
+          .then((offers) =>
+            res.status(200).send(getPagingData(offers, page, limit))
+          )
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        // console.log(error);
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get the Project Inprogress offers
+router.get(
+  "/inprogress",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+
+    helper
+      .checkPermission(req.user.role_id, "project_offer_get_all")
+      .then((rolePerm) => {
+        ProjectOffer.findAndCountAll({
+          limit,
+          offset,
+          // as: "projectoffers",
+          attributes: [
+            "id",
+            "price",
+            "days_to_deliver",
+            "message_desc",
+            "accept_status",
+            "createdAt",
+            getPath(req, "pdf_url"),
+          ],
+          include: [
+            {
+              model: Project,
+              attributes: ["id", "proj_title", "createdAt", "updatedAt"],
+              where: {
+                user_added_id: {
+                  [Op.eq]: req.user?.id,
+                },
+              },
+              include: {
+                model: ProjStatus,
+                attributes: [],
+                where: {
+                  stat_name: {
+                    [Op.eq]: "In-Progress",
+                  },
+                },
+              },
+            },
+            {
+              model: User,
+              as: "client",
+              attributes: [
+                "id",
+                "email",
+                "fullname",
+                "phone",
+                getPath(req, "imgPath"),
+              ],
+              include: {
+                model: UserProfile,
+                as: "userprofiles",
+                attributes: ["about_user", "specialization"],
+              },
+            },
+          ],
+          distinct: true,
+        })
+          .then((offers) =>
+            res.status(200).send(getPagingData(offers, page, limit))
+          )
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        // console.log(error);
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get the Project Complete offers
+router.get(
+  "/complete",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+
+    helper
+      .checkPermission(req.user.role_id, "project_offer_get_all")
+      .then((rolePerm) => {
+        ProjectOffer.findAndCountAll({
+          limit,
+          offset,
+          // as: "projectoffers",
+          attributes: [
+            "id",
+            "price",
+            "days_to_deliver",
+            "message_desc",
+            "accept_status",
+            "createdAt",
+            getPath(req, "pdf_url"),
+          ],
+          include: [
+            {
+              model: Project,
+              attributes: ["id", "proj_title", "createdAt", "updatedAt"],
+              where: {
+                user_added_id: {
+                  [Op.eq]: req.user?.id,
+                },
+              },
+              include: {
+                model: ProjStatus,
+                attributes: [],
+                where: {
+                  stat_name: {
+                    [Op.eq]: "Completed",
+                  },
+                },
+              },
+            },
+            {
+              model: User,
+              as: "client",
+              attributes: [
+                "id",
+                "email",
+                "fullname",
+                "phone",
+                getPath(req, "imgPath"),
+              ],
+              include: {
+                model: UserProfile,
+                as: "userprofiles",
+                attributes: ["about_user", "specialization"],
+              },
+            },
+          ],
+          distinct: true,
+        })
+          .then((offers) =>
+            res.status(200).send(getPagingData(offers, page, limit))
+          )
+          .catch((error) => {
+            res.status(400).send({
+              success: false,
+              msg: error,
+            });
+          });
+      })
+      .catch((error) => {
+        // console.log(error);
+        res.status(403).send({
+          success: false,
+          msg: error,
+        });
+      });
+  }
+);
+
+// Get the Engineer all of his offers
+router.get(
+  "/enginner",
+  passport.authenticate("jwt", {
+    session: false,
+  }),
+  function (req, res) {
+    const { page, size } = req.query;
+    const { limit, offset } = getPagination(page, size);
+
+    helper
+      .checkPermission(req.user.role_id, "project_offer_get_all")
+      .then((rolePerm) => {
+        ProjectOffer.findAndCountAll({
+          limit,
+          offset,
+          // as: "projectoffers",
+          attributes: [
+            "id",
+            "price",
+            "days_to_deliver",
+            "message_desc",
+            "accept_status",
+            "createdAt",
+            getPath(req, "pdf_url"),
+            [
+              Sequelize.literal(
+                `(SELECT (SELECT SUM(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = ProjectOffer.user_offered_id) / (SELECT count(star_rate) FROM userreviews AS reviews WHERE reviews.talent_id = ProjectOffer.user_offered_id))`
+              ),
+              "review_avg",
+            ],
+          ],
+          include: [
+            {
+              model: Project,
+              attributes: ["id", "proj_title", "createdAt", "updatedAt"],
+              include: {
+                model: ProjStatus,
+              },
+            },
+          ],
+          where: {
+            user_offered_id: req.user?.id,
           },
           distinct: true,
         })
