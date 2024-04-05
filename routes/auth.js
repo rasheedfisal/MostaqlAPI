@@ -276,7 +276,7 @@ router.post("/signin", loginLimiter, function (req, res) {
 
           res.cookie("jwt", refreshToken, {
             httpOnly: true, //accessible only by web server
-            //secure: true, //https
+            secure: process.env.NODE_ENV !== "development", //https
             //sameSite: "None", //cross-site cookie
             maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
@@ -298,7 +298,7 @@ router.post("/signin", loginLimiter, function (req, res) {
     .catch((error) => res.status(400).send({ msg: error }));
 });
 
-router.get("test", (req, res) => res.send({ message: "hello world" }));
+router.get("/test", (req, res) => res.send({ message: "hello world" }));
 
 router.post("/dashboard_signin", loginLimiter, function (req, res) {
   console.log("==> start signin");
@@ -372,7 +372,7 @@ router.post("/dashboard_signin", loginLimiter, function (req, res) {
 
           res.cookie("jwt", refreshToken, {
             httpOnly: true, //accessible only by web server
-            //secure: true, //https
+            secure: process.env.NODE_ENV !== "development", //https
             //sameSite: "None", //cross-site cookie
             maxAge: 24 * 60 * 60 * 1000, //7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
           });
@@ -462,7 +462,7 @@ router.post("/signout", function (req, res) {
   if (!cookies?.jwt) return res.sendStatus(204); //No content
   res.clearCookie("jwt", {
     httpOnly: true,
-    //secure: true,
+    secure: process.env.NODE_ENV !== "development",
     //sameSite: "None"
   });
   res.json({ msg: "Cookie cleared" });
