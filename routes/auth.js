@@ -23,6 +23,8 @@ const { sendNotification } = require("../utils/advanceNotifier");
 const { sendMail } = require("../utils/mailingProcessor");
 const pubClient = require("../utils/redisClient");
 const bcrypt = require("bcryptjs");
+const currencyFormatter = require("../utils/currencyFormatter");
+const { getAccountFeedRequestWithUser } = require("../services/payment");
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -620,6 +622,62 @@ router.post("/test/mail", async function (req, res) {
   } catch (error) {
     res.status(400).send({ msg: error });
   }
+});
+
+router.get("/checkout", async function (req, res) {
+  const { requestId } = req.query;
+  const feedRequest = await getAccountFeedRequestWithUser(requestId);
+  res.send(feedRequest);
+});
+
+router.post("/payment-success", async function (req, res) {
+  const { id, merchant, requestId } = req.body;
+  const feedRequest = await getAccountFeedRequestWithUser(requestId);
+  if (!feedRequest) {
+    return res.redirect("/");
+  }
+  const options = {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      Authorization: `Bearer ${process.env.TAP_PRIVATE_KEY}`,
+    },
+    body: JSON.stringify({
+      amount: feedRequest.amount,
+      currency: "SAR",
+      customer_initiated: true,
+      threeDSecure: true,
+      save_card: false,
+      description: `عملية دفع للمستخدم ${feedRequest.User.fullname}, رقم الطلب هو ${feedRequest.id}`,
+      //metadata: { udf1: "Metadata 1" },
+      reference: {
+        transaction: "txn_" + feedRequest.id,
+        order: "ord_" + feedRequest.id,
+      },
+      receipt: { email: true, sms: true },
+      customer: {
+        first_name: feedRequest.User.fullname.split(" ")[0],
+        middle_name: feedRequest.User.fullname.split(" ")[1],
+        last_name: feedRequest.User.fullname.split(" ")[2],
+        email: feedRequest.User.email,
+        phone: { country_code: 966, number: feedRequest.User.phone },
+      },
+      merchant: { id: merchant.id },
+      source: { id: id },
+      post: { url: "http://localhost:3000/v1/api/auth/payment/callback" },
+      redirect: { url: "http://localhost:3000" },
+    }),
+  };
+
+  fetch("https://api.tap.company/v2/charges/", options)
+    .then((response) => response.json())
+    .then((response) => res.status(200).json(response))
+    .catch((err) => res.status(422).json({ msg: err }));
+});
+
+router.post("/payment/callback", function (req, res) {
+  console.log("==> callback", req.body);
 });
 
 module.exports = router;

@@ -7,4 +7,16 @@ module.exports = {
 
     return result;
   },
+  SARFormatter: (amount) => {
+    const result = new Intl.NumberFormat("en-US", {
+      currency: "SAR",
+      currencyDisplay: "symbol",
+      currencySign: "standard",
+      style: "currency",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+
+    return { result, float: Number(amount) };
+  },
 };

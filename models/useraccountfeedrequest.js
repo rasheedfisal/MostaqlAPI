@@ -40,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
         allowNull: false,
       },
+      refrenceInfo: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+      },
     },
     {
       sequelize,
