@@ -1,3 +1,4 @@
+const { QueryTypes } = require("sequelize");
 const {
   sequelize,
   UserWithdrawalRequest,
@@ -12,15 +13,20 @@ const {
   Transactions,
 } = require("../models");
 const { sendNotification } = require("../utils/advanceNotifier");
+const { sendEmailRequest } = require("../utils/advanceMailer");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 const Helper = require("../utils/helper");
 const helper = new Helper();
 
-async function createAccountFeedRequest({ authUser, amount, attachment }, res) {
+async function createAccountFeedRequest(
+  { authUser, amount, attachment },
+  res,
+  req
+) {
   try {
     await helper.checkPermission(authUser.role_id, "feed_request_account_add");
 
-    if (!req.body.amount)
+    if (!amount)
       return handleResponse(res, "Please pass Required Fields.", 400);
 
     await sequelize.transaction(async (t) => {
@@ -99,6 +105,8 @@ async function createAccountFeedRequest({ authUser, amount, attachment }, res) {
       });
     });
   } catch (error) {
+    console.log("error", error);
+
     return handleForbidden(res, error);
   }
 }

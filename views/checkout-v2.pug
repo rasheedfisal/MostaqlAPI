@@ -249,7 +249,9 @@ html
             },
             body: JSON.stringify(data),
           }).then((response) => response.json())
-            .then((response) => window.open(response.transaction.url))
+            .then((response) => {
+              window.location.href = response.transaction.url
+            })
           .catch(error => {
             console.error('Error:', error);
           });

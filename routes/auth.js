@@ -24,7 +24,11 @@ const { sendMail } = require("../utils/mailingProcessor");
 const pubClient = require("../utils/redisClient");
 const bcrypt = require("bcryptjs");
 const currencyFormatter = require("../utils/currencyFormatter");
-const { getAccountFeedRequestWithUser } = require("../services/payment");
+const {
+  getAccountFeedRequestWithUser,
+  getAccountFeedRequest,
+} = require("../services/payment");
+
 //var fs = require("fs");
 
 const storage = multer.diskStorage({
@@ -624,10 +628,42 @@ router.post("/test/mail", async function (req, res) {
   }
 });
 
+// router.get("/checkout", async function (req, res) {
+//   const { requestId } = req.query;
+//   const feedRequest = await getAccountFeedRequestWithUser(requestId);
+//   res.send(feedRequest);
+// });
+// payment checkout
 router.get("/checkout", async function (req, res) {
   const { requestId } = req.query;
-  const feedRequest = await getAccountFeedRequestWithUser(requestId);
-  res.send(feedRequest);
+
+  if (!requestId) {
+    return res.redirect("/");
+  }
+
+  const feedRequest = await getAccountFeedRequest(requestId);
+
+  if (!feedRequest) {
+    return res.redirect("/");
+  }
+
+  const amount = currencyFormatter.SARFormatter(feedRequest.amount);
+  const amount_without_vat = currencyFormatter.SARFormatter(feedRequest.amount);
+  const vat_percent_amount = currencyFormatter.SARFormatter(
+    (feedRequest.amount * 10) / 100
+  );
+  const refund_guarantee = currencyFormatter.SARFormatter(4);
+  const amount_with_vat = currencyFormatter.SARFormatter(
+    amount_without_vat.float + vat_percent_amount.float + refund_guarantee.float
+  );
+  res.render("checkout-v2", {
+    amount: amount.result,
+    amount_without_vat: amount_without_vat.result,
+    vat_percent_amount: vat_percent_amount.result,
+    refund_guarantee: refund_guarantee.result,
+    amount_with_vat: amount_with_vat.result,
+    requestId,
+  });
 });
 
 router.post("/payment-success", async function (req, res) {

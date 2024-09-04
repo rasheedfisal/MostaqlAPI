@@ -23,6 +23,7 @@ const { getPath, getNestedPath } = require("../utils/fileUrl");
 const { QueryTypes } = require("sequelize");
 const { sendNotification } = require("../utils/advanceNotifier");
 const { isUserHaveMinimumAmount } = require("../utils/commissions");
+const currencyFormatter = require("../utils/currencyFormatter");
 const { handleForbidden, handleResponse } = require("../utils/handleError");
 const { sendEmailRequest } = require("../utils/advanceMailer");
 const {
@@ -128,11 +129,12 @@ router.post(
     const {
       user,
       body: { amount },
-      file: { path },
     } = req;
+
     return await createAccountFeedRequest(
-      { authUser: user, amount, attachment: path },
-      res
+      { authUser: user, amount, attachment: req.file?.path },
+      res,
+      req
     );
   }
 );
