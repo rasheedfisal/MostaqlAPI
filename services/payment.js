@@ -1,15 +1,11 @@
 const { QueryTypes } = require("sequelize");
 const {
   sequelize,
-  UserWithdrawalRequest,
   UserAccountFeedRequest,
-  UserCreditCardRequest,
-  UserPaypalRequest,
   UserWallet,
   Notification,
   ReadNotification,
   User,
-  Role,
   Transactions,
 } = require("../models");
 const { sendNotification } = require("../utils/advanceNotifier");
@@ -216,6 +212,7 @@ async function transferFeedMoneyToUser({ authUser, id, refrenceInfo }, res) {
       );
       await UserAccountFeedRequest.update(
         {
+          accepted: true,
           is_transfered: true,
           refrenceInfo,
         },
@@ -283,7 +280,7 @@ async function transferFeedMoneyToUser({ authUser, id, refrenceInfo }, res) {
 async function getAccountFeedRequest(requestId) {
   return await UserAccountFeedRequest.findByPk(requestId);
 }
-async function getAccountFeedRequestWithUser(requestId) {
+async function getAccountFeedRequestWithUser() {
   return await UserAccountFeedRequest.findOne({
     include: [
       {
